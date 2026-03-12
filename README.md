@@ -105,7 +105,7 @@ openclaw sessions --json
 
 注意：论文投递不会自动取“当前会话”。后台服务会使用你配置的 `openclaw.session_key`，再在发送时解析成真实 `sessionId`。
 
-如果你把 OpenClaw 也用作 LLM 后端，建议单独使用一个 agent，例如 `paper2data-llm`，不要和接收论文的用户会话混用。
+如果你把 OpenClaw 也用作 LLM 后端，建议优先使用分用途 agent，例如 `paper2data-translation`、`paper2data-filter`、`paper2data-graduate-student`；如果只想快速跑通，也可以先用单个 `paper2data-llm` 兼容模式，不要和接收论文的用户会话混用。
 
 ## Common Endpoints
 

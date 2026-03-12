@@ -13,6 +13,17 @@ LEGACY_RUNTIME_CONFIG_FILE = "runtime_config.json"
 ConfigMap = dict[str, object]
 
 
+def _deep_merge_dict(base: ConfigMap, override: ConfigMap) -> ConfigMap:
+    merged = dict(base)
+    for key, value in override.items():
+        current = merged.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge_dict(cast(ConfigMap, current), cast(ConfigMap, value))
+        else:
+            merged[key] = value
+    return merged
+
+
 def _get_logger(logger: logging.Logger | None = None) -> logging.Logger:
     return logger or logging.getLogger("app")
 
@@ -78,6 +89,6 @@ def get_config(name: str, logger: logging.Logger | None = None) -> ConfigMap:
     base_config = dict(config_map.get(name, {}))
     runtime_value = runtime.get(name)
     if isinstance(runtime_value, dict):
-        base_config.update(cast(ConfigMap, runtime_value))
+        base_config = _deep_merge_dict(base_config, cast(ConfigMap, runtime_value))
 
     return base_config

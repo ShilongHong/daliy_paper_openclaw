@@ -1,5 +1,6 @@
 import json
 import subprocess
+import shutil
 from pathlib import Path
 
 from core.config_loader import load_settings
@@ -77,6 +78,18 @@ def _list_openclaw_agents(binary_path: str) -> set[str]:
         }
     except Exception:
         return set()
+
+
+def _discover_openclaw_binary() -> str:
+    candidates = [
+        shutil.which("openclaw"),
+        shutil.which("openclaw.cmd"),
+        shutil.which("openclaw.exe"),
+    ]
+    for candidate in candidates:
+        if candidate:
+            return candidate
+    return "openclaw"
 
 
 def _prompt_model_choice(prompt: str, models: list[str], default: str) -> str:
@@ -192,7 +205,17 @@ def run_init_wizard() -> Path:
         }
 
     session_key = input("OpenClaw session key（默认 main）: ").strip() or "main"
-    binary_path = input("OpenClaw 命令路径（默认 openclaw）: ").strip() or "openclaw"
+    discovered_binary = _discover_openclaw_binary()
+    if discovered_binary != "openclaw":
+        print(f"检测到 OpenClaw 命令路径: {discovered_binary}")
+    else:
+        print(
+            "未自动探测到 OpenClaw 命令，若默认值不可用，请输入完整路径（例如 ~/.nvm/.../openclaw）"
+        )
+    binary_path = (
+        input(f"OpenClaw 命令路径（默认 {discovered_binary}）: ").strip()
+        or discovered_binary
+    )
     timeout_seconds = _prompt_int("OpenClaw 超时秒数", 120)
 
     research_description = input("研究方向描述（可留空，后续在 Web 中填写）: ").strip()
@@ -226,12 +249,16 @@ def run_init_wizard() -> Path:
         available_models = _discover_openclaw_models(binary_path)
         default_model = available_models[0] if available_models else ""
         translation_agent_id = (
-            input("翻译 Agent ID（默认 translation）: ").strip() or "translation"
+            input("翻译 Agent ID（默认 paper2data-translation）: ").strip()
+            or "paper2data-translation"
         )
-        filter_agent_id = input("筛选 Agent ID（默认 filter）: ").strip() or "filter"
+        filter_agent_id = (
+            input("筛选 Agent ID（默认 paper2data-filter）: ").strip()
+            or "paper2data-filter"
+        )
         review_agent_id = (
-            input("精读 Agent ID（默认 graduate-student）: ").strip()
-            or "graduate-student"
+            input("精读 Agent ID（默认 paper2data-graduate-student）: ").strip()
+            or "paper2data-graduate-student"
         )
         translation_model = _prompt_model_choice(
             "翻译 Agent 模型",

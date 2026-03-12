@@ -70,6 +70,17 @@ logger = setup_logging()
 PaperRecord = dict[str, object]
 PaperQueryResult = dict[str, object]
 ConfigMap = dict[str, object]
+
+
+def _deep_merge_config(base: ConfigMap, override: ConfigMap) -> ConfigMap:
+    merged = dict(base)
+    for key, value in override.items():
+        current = merged.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge_config(cast(ConfigMap, current), cast(ConfigMap, value))
+        else:
+            merged[key] = value
+    return merged
 PaperFetcher = Callable[..., PaperQueryResult]
 
 
@@ -435,7 +446,13 @@ async def update_config(name: str, update: ConfigUpdate):
         if name == "research_description":
             runtime["research_description"] = update.config.get("content", "")
         else:
-            runtime[name] = update.config
+            existing = runtime.get(name)
+            if isinstance(existing, dict):
+                runtime[name] = _deep_merge_config(
+                    cast(ConfigMap, existing), update.config
+                )
+            else:
+                runtime[name] = update.config
 
         save_runtime_config(runtime, logger=logger)
 
