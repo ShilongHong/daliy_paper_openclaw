@@ -187,15 +187,57 @@ cd daliy_paper_openclaw
 
 ### Step 3: Create a virtual environment
 
+本项目需要 **Python 3.11**，推荐使用 [uv](https://github.com/astral-sh/uv) 管理虚拟环境（速度更快，且可自动下载指定 Python 版本）。
+
+#### 3a. 安装 uv（如果尚未安装）
+
+检查是否已安装：
+
 ```bash
-python -m venv .venv || uv venv .venv
+uv --version
+```
+
+如果命令不存在，按对应平台安装：
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+安装完成后重新确认：
+
+```bash
+uv --version
+```
+
+#### 3b. 创建 Python 3.11 虚拟环境
+
+```bash
+uv venv .venv --python 3.11
+```
+
+> uv 会自动下载 Python 3.11（如果本机尚未安装），无需手动配置。
+
+#### 3c. 激活虚拟环境
+
+```bash
+# macOS / Linux
 source .venv/bin/activate
+
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+
+# Windows (CMD)
+.venv\Scripts\activate.bat
 ```
 
 ### Step 4: Install Python dependencies
 
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 ### Step 5: Write local configuration
@@ -272,13 +314,17 @@ openclaw agent --agent main --json --message "Reply with exactly: ok"
 python app.py
 ```
 
-If port `20001` is already in use, stop the old process first.
+If port `20001` is already in use, use other port:
+
+```bash
+python app.py --port <new_port>
+```
 
 ### Step 8: Verify setup
 
 ```bash
-curl http://127.0.0.1:20001/api/health
-curl http://127.0.0.1:20001/api/config/all
+curl http://127.0.0.1:<new_port>/api/health
+curl http://127.0.0.1:<new_port>/api/config/all
 ```
 
 ### Step 9: Optional runtime configuration
@@ -286,7 +332,7 @@ curl http://127.0.0.1:20001/api/config/all
 If the user chose OpenClaw as the LLM backend, configure it after startup:
 
 ```bash
-curl -X PUT http://127.0.0.1:20001/api/config/llm_filter \
+curl -X PUT http://127.0.0.1:<new_port>/api/config/llm_filter \
   -H 'Content-Type: application/json' \
   --data '{
     "config": {
@@ -321,6 +367,6 @@ curl -X PUT http://127.0.0.1:20001/api/config/llm_filter \
 Run at least one of these after install:
 
 ```bash
-curl -X POST http://127.0.0.1:20001/api/actions/process-now
-curl -X POST http://127.0.0.1:20001/api/actions/deliver-now
+curl -X POST http://127.0.0.1:<new_port>/api/actions/process-now
+curl -X POST http://127.0.0.1:<new_port>/api/actions/deliver-now
 ```

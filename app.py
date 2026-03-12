@@ -77,10 +77,14 @@ def _deep_merge_config(base: ConfigMap, override: ConfigMap) -> ConfigMap:
     for key, value in override.items():
         current = merged.get(key)
         if isinstance(current, dict) and isinstance(value, dict):
-            merged[key] = _deep_merge_config(cast(ConfigMap, current), cast(ConfigMap, value))
+            merged[key] = _deep_merge_config(
+                cast(ConfigMap, current), cast(ConfigMap, value)
+            )
         else:
             merged[key] = value
     return merged
+
+
 PaperFetcher = Callable[..., PaperQueryResult]
 
 
@@ -116,10 +120,25 @@ scheduler = PaperScheduler(
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """应用生命周期管理"""
+    import threading
+
     # 启动时
     logger.info("🚀 应用启动中...")
     storage_service.init_storage()
     scheduler.start()
+
+    # 首次运行检测：数据库为空时立即触发一次抓取
+    try:
+        stats = storage_service.get_paper_stats()
+        raw_count = stats.get("raw_count", stats.get("total_raw", 0))
+        if raw_count == 0:
+            logger.info("📭 检测到数据库为空，首次运行，立即触发论文抓取...")
+            threading.Thread(
+                target=run_fetch_job, daemon=True, name="first-run-fetch"
+            ).start()
+    except Exception as e:
+        logger.warning(f"首次运行检测失败，跳过自动触发: {e}")
+
     yield
     # 关闭时
     logger.info("🛑 应用关闭中...")

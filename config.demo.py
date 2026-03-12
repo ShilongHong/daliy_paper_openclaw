@@ -38,8 +38,8 @@ ARXIV_CONFIG = {
     ],
     "max_results_per_keyword": None,
     "batch_size": 50,
-    "request_delay": 3,
-    "consecutive_duplicate_threshold": 5000,
+    "request_delay": 30,
+    "consecutive_duplicate_threshold": 10,
     "recent_days": 3,
     "api_url": "http://export.arxiv.org/api/query",
     "mysql": {

@@ -76,9 +76,9 @@ curl -fsSL https://raw.githubusercontent.com/ShilongHong/daliy_paper_openclaw/ma
 npm install -g openclaw
 git clone https://github.com/ShilongHong/daliy_paper_openclaw.git
 cd daliy_paper_openclaw
-python -m venv .venv || uv venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+uv venv .venv --python 3.11   # 需要 uv，见安装指南 Step 3
+source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
+uv pip install -r requirements.txt
 cp config.local.example.json config.local.json
 python app.py
 ```

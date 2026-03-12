@@ -45,7 +45,7 @@ class ArxivService:
         self.max_results_per_keyword = self.config["max_results_per_keyword"]
 
         self.consecutive_duplicate_threshold = self.config.get(
-            "consecutive_duplicate_threshold", 100
+            "consecutive_duplicate_threshold", 10
         )
 
         self.enable_duplicate_check = MYSQL_AVAILABLE and is_mysql_enabled()
