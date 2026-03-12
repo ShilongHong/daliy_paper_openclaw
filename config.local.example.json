@@ -11,8 +11,8 @@
     "enable": true,
     "backend": "openclaw",
     "api_key": "",
-    "base_url": "https://api.siliconflow.cn/v1/",
-    "model": "deepseek-ai/DeepSeek-V3.2",
+    "base_url": "https://openrouter.ai/api/v1",
+    "model": "google/gemini-3.1-flash-lite-preview",
     "openclaw": {
       "binary_path": "openclaw",
       "translation_agent_id": "translation",

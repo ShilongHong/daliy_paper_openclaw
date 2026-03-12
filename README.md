@@ -4,7 +4,16 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-`daliy_paper_openclaw` 是一个把 ArXiv 抓取、LLM 筛选、中文翻译、队列管理和 OpenClaw 投递放在一起的单进程项目。它适合把“每天看论文”这件事自动化：抓论文、按研究方向打分、整理成摘要，再定时发到你的 OpenClaw session。
+`daliy_paper_openclaw` 是一个把 ArXiv 抓取、LLM 筛选、中文翻译、队列管理、Web 界面和 OpenClaw 投递放在一起的单进程项目。它适合把“每天看论文”这件事自动化：抓论文、按研究方向打分、整理成摘要、在网页里管理，再定时发到你的 OpenClaw session。
+
+> **告别信息过载。** 让 AI 帮你每天读 ArXiv，只把真正值得你看的论文推到面前。
+
+## 核心亮点
+
+- **🧠 懂你的筛选逻辑**：不是简单关键词匹配，而是基于你的自然语言研究方向描述做相关度判断。
+- **📊 可视化管理界面**：内置 Web 仪表盘、论文列表、详情页和配置页，不只是后台脚本。
+- **⚡ 单进程三合一**：FastAPI、调度器和静态前端一起启动，部署和维护成本很低。
+- **💬 OpenClaw 直达**：筛选后的论文可以直接投递到 OpenClaw session，便于继续追问、改写和精读。
 
 ## What It Does
 
@@ -13,6 +22,28 @@
 - 生成中文标题、中文摘要、推荐理由和潜在帮助
 - 把结果写入本地数据库并加入推送队列
 - 按手动触发或定时任务投递到 OpenClaw
+
+## 界面概览
+
+### 1. 全局仪表盘
+查看系统状态、论文统计和整体运行情况。
+
+![全局仪表盘](docs/images/dashboard.png)
+
+### 2. 智能论文列表
+按卡片方式浏览筛选后的论文，直接看到中文标题、推荐理由和相关度分数。
+
+![论文列表](docs/images/paper_list.png)
+
+### 3. 论文详情页
+查看中英摘要、推荐理由、潜在帮助和论文链接，适合快速决定要不要深入读。
+
+![论文详情](docs/images/detail.png)
+
+### 4. 配置页面
+直接在网页里修改研究方向、ArXiv 关键词和系统配置，不用反复改文件。
+
+![系统配置](docs/images/config.png)
 
 ## Installation
 

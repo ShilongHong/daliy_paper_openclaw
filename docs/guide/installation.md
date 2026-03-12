@@ -21,58 +21,147 @@ curl -fsSL https://raw.githubusercontent.com/ShilongHong/daliy_paper_openclaw/ma
 
 Follow these steps.
 
-### Step 0: Ask user about configuration
+### Step 0: 询问用户配置
 
-Ask the user these questions before installation:
+**在开始安装之前，按以下顺序向用户询问所有配置问题。**
 
-1. Database type?
-   - `sqlite`
-   - `mysql`
+---
 
-2. If using SQLite, what file path should be used?
-   - Default: `data/paper2data.db`
+#### Q1. 研究方向描述
 
-3. Which OpenClaw session should receive pushed papers?
-   - Default: `main`
-   - This is an explicit delivery target, not the "current" interactive session
-   - Do not auto-infer the current session for a background service
+> **为什么重要**：这是整个系统的核心。LLM 会根据这段描述来给每篇论文打相关度分数。描述越模糊，推荐噪音越大；描述越精确（包含核心方向、支撑技术、排除方向），筛选效果越好。
 
-4. Which LLM backend should be used?
-   - `openai_compatible`
-   - `openclaw`
+请用户提供一段自然语言描述他们的研究方向，建议包含：
+- 核心研究主题（最高相关度）
+- 支撑/相关技术（中等相关度）
+- 明确排除的方向（减少噪音）
 
-5. If `openai_compatible`, ask for:
-   - `api_key`
-   - `base_url`
-   - `model`
+示例：
 
-6. If `openclaw`, ask for:
-   - `binary_path` (default: `openclaw`)
-   - `translation_agent_id` (recommended: `translation`)
-   - `filter_agent_id` (recommended: `filter`)
-   - `review_agent_id` (recommended: `graduate-student`)
-   - model for each agent, discovered from `openclaw models list --json`
-   - `timeout_seconds` (default: `120`)
-   - `use_local` (`true` or `false`)
+```text
+我的研究方向是图表数据提取与多模态信息理解。
+核心主题：Chart-to-Table、图表QA、视觉语言模型在图表任务上的应用。
+相关技术：OCR、表格识别、文档智能。
+排除方向：纯图表生成/可视化（不涉及提取）、纯NLP任务。
+```
 
-7. Should timed fetch and timed delivery be enabled now?
-   - If yes, ask for fetch time and push time
-   - If no, finish installation first and verify manually
+---
 
-8. What research direction should be used for relevance scoring?
-   - Ask for a short natural language description
+#### Q2. ArXiv 关键词 / 分类
 
-9. Which ArXiv keywords/categories should be tracked?
-   - Default: `cs.CL, cs.CV, cs.LG, cs.AI, cs.IR`
+> **为什么重要**：这些分类决定了从 arXiv 抓取哪些领域的论文。分类定义的是 LLM 筛选之前的原始论文池——选太少会漏掉相关论文，选太多会在不相关论文上浪费 LLM token。
 
-Important:
+常用分类参考：
+- `cs.CL` — 计算语言学（NLP）
+- `cs.CV` — 计算机视觉
+- `cs.LG` — 机器学习
+- `cs.AI` — 人工智能
+- `cs.IR` — 信息检索
+- `cs.RO` — 机器人学
+- `cs.SE` — 软件工程
+- `stat.ML` — 统计机器学习
 
-- Do not default OpenClaw LLM to the same user-facing session used for paper delivery.
-- Prefer three dedicated agents: `translation`, `filter`, `graduate-student`.
-- If the user does not provide full LLM config, still complete installation with a minimal runnable setup.
-- Delivery uses configured `openclaw.session_key`, then resolves it against `openclaw sessions --json` at send time.
+默认值：`["cs.CL", "cs.CV", "cs.LG", "cs.AI", "cs.IR"]`
 
-### Step 1: Install OpenClaw CLI
+---
+
+#### Q3. 数据库类型
+
+> **为什么重要**：SQLite 零配置、单文件，适合个人在一台机器上使用。MySQL 只在需要远程访问、多用户共享或已有 MySQL 实例的情况下才需要。
+
+选项：
+- `sqlite` — 推荐大多数用户使用。无需额外配置，数据存在本地文件中。
+- `mysql` — 适合需要远程/共享数据库访问的高级用户。
+
+如果选 `sqlite`：询问文件路径，默认 `data/paper2data.db`
+
+如果选 `mysql`：询问 host、port、user、password、database
+
+---
+
+#### Q4. LLM 后端
+
+> **为什么重要**：系统需要 LLM 来（1）给论文打相关度分数，（2）将标题和摘要翻译成中文，（3）可选地生成更深度的论文分析。你需要选择如何调用 LLM。
+
+选项：
+- `openai_compatible` — 使用任意 OpenAI 兼容 API（SiliconFlow、DeepSeek、OpenAI 等）。配置简单，只需要一个 API key。
+- `openclaw` — 通过 OpenClaw agent 路由 LLM 调用。可以为不同任务分配不同模型（例如便宜的模型翻译、更强的模型打分）。更灵活，但需要配置 OpenClaw agent。
+
+如果选 `openai_compatible`，询问：
+- `api_key` — API 密钥
+- `base_url` — API 地址（默认：`https://openrouter.ai/api/v1`）
+- `model` — 模型名称（默认：`google/gemini-3.1-flash-lite-preview`）
+
+如果选 `openclaw`，安装阶段只询问最小必要配置：
+- `binary_path` — openclaw 可执行文件路径（默认：`openclaw`）
+- `translation_agent_id` — 翻译任务的 agent（默认：`translation`）
+- `filter_agent_id` — 论文打分的 agent（默认：`filter`）
+- `review_agent_id` — 深度分析的 agent（默认：`graduate-student`，可留默认）
+- `timeout_seconds` — LLM 响应超时时间（默认：`120`）
+
+安装阶段**不要强制询问**每个 agent 的模型，也不要一开始就展开高级 OpenClaw 路由配置。优先先让系统跑起来，再在后续高级配置里调整。
+
+建议：使用三个独立 agent 而不是一个共享 agent，这样可以为不同任务分配不同模型；但如果用户只是想快速跑通，先保留默认 agent 名称即可。
+
+---
+
+#### Q5. 论文投递目标
+
+> **为什么重要**：论文打分和翻译完成后，会被推送到一个 OpenClaw session。后台服务运行时并没有“当前对话”这个概念，所以最终必须把一个明确的 `session_key` 写进配置里。
+
+安装阶段建议这样做：
+- 先运行 `openclaw sessions --json`
+- 如果能列出 session，就把**最近一个候选 session**展示给用户确认
+- 询问：`是否使用这个 session 作为默认接收会话？`
+- 如果用户不同意，再让用户手动输入 `session_key`
+
+重要：不要无确认地直接假定“当前对话”就是最终投递目标。可以把候选 session 作为默认建议值，但必须让用户确认。
+
+---
+
+#### Q6. 研究生精读模式（Graduate Student Briefing）
+
+> **为什么重要**：标准摘要包含标题、分数、推荐理由和摘要。研究生精读模式会额外生成更丰富的分析：机构提取、贡献点、结论点、实验要点和重要性总结。每篇论文消耗更多 LLM token，但能给出更有价值的每日推送。
+
+选项：
+- `false`（默认）— 标准摘要，token 消耗较低
+- `true` — 深度精读分析，信息更丰富
+
+---
+
+#### Q7. 定时任务配置
+
+> **为什么重要**：调度器控制系统何时自动从 arXiv 抓取新论文、何时将打分后的论文投递到你的 session。不配置调度的话，所有操作都需要手动通过 API 触发。
+
+选项：
+- 现在启用 — 配置自动抓取和投递时间
+- 暂时跳过 — 先完成安装，之后再配置
+
+如果启用：
+- 抓取时间 — 什么时候从 arXiv 拉取新论文（默认：`02:00`，建议深夜以避免 arXiv 限流）
+- 推送时间 — 什么时候投递打分后的论文（默认：`["09:00"]`，可设置多个时间如 `["09:00", "14:30"]`）
+
+---
+
+**Agent 注意事项：**
+
+- 不要在未确认的情况下把最近 session 直接当成最终投递目标。
+- 如果用户明确希望论文就发到当前正在使用的对话，可以把该 session 写入 `openclaw.session_key`。
+- 优先使用三个独立 agent：`translation`、`filter`、`graduate-student`。
+- 如果用户没有提供完整的 LLM 配置，仍然以最小可运行配置完成安装。
+- 投递使用配置的 `openclaw.session_key`，运行时通过 `openclaw sessions --json` 解析实际 sessionId。
+
+### Step 1: 安装 OpenClaw CLI
+
+先检查是否已安装：
+
+```bash
+openclaw --version
+```
+
+如果命令存在且返回版本号，跳过安装。
+
+如果未安装：
 
 ```bash
 npm install -g openclaw
@@ -101,7 +190,7 @@ pip install -r requirements.txt
 
 ### Step 5: Write local configuration
 
-At minimum, create `config.local.json`.
+Create `config.local.json` based on the user's answers from Step 0.
 
 Minimal SQLite + OpenClaw delivery config:
 
@@ -111,20 +200,49 @@ Minimal SQLite + OpenClaw delivery config:
     "engine": "sqlite",
     "sqlite_path": "data/paper2data.db"
   },
-  "research_description": "请在这里填写你的研究方向描述",
+  "research_description": "<user's research direction from Q1>",
   "arxiv": {
-    "keywords": ["cs.CL", "cs.CV", "cs.LG"]
+    "keywords": ["<categories from Q2>"]
+  },
+  "llm_filter": {
+    "enable": true,
+    "backend": "<backend from Q4>",
+    "api_key": "<if openai_compatible>",
+    "base_url": "<if openai_compatible>",
+    "model": "<if openai_compatible>",
+    "openclaw": {
+      "binary_path": "openclaw",
+      "translation_agent_id": "translation",
+      "filter_agent_id": "filter",
+      "review_agent_id": "graduate-student",
+      "translation_model": "",
+      "filter_model": "",
+      "review_model": "",
+      "timeout_seconds": 120,
+      "use_local": false
+    }
   },
   "openclaw": {
-    "session_key": "main",
+    "session_key": "<session_key from Q5>",
     "binary_path": "openclaw",
-    "timeout_seconds": 120
+    "timeout_seconds": 120,
+    "enable_graduate_student_briefing": false
+  },
+  "schedule": {
+    "enable_schedule": true,
+    "fetch_papers": {
+      "enable": true,
+      "time": "02:00"
+    },
+    "push_papers": {
+      "enable": true,
+      "times": ["09:00"]
+    }
   }
 }
 ```
 
-If the user wants OpenClaw as the LLM backend too, also configure runtime settings after startup through `/api/config/llm_filter`.
-Create missing agents during setup with `openclaw agents add <name> --model <id> --workspace <repo> --non-interactive`.
+Adapt the template above based on the user's actual answers. Remove unused fields (e.g. if using `openai_compatible`, the `openclaw` block inside `llm_filter` can use defaults).
 
 ### Step 6: Verify OpenClaw access
 
@@ -165,8 +283,8 @@ curl -X PUT http://127.0.0.1:20001/api/config/llm_filter \
       "enable": true,
       "backend": "openclaw",
       "api_key": "",
-      "base_url": "https://api.siliconflow.cn/v1/",
-      "model": "deepseek-ai/DeepSeek-V3.2",
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "google/gemini-3.1-flash-lite-preview",
       "temperature": 0.5,
       "max_tokens": 4096,
       "min_score": 60,
