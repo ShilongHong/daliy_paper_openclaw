@@ -40,7 +40,7 @@ ARXIV_CONFIG = {
     "batch_size": 50,
     "request_delay": 3,
     "consecutive_duplicate_threshold": 5000,
-    "recent_days": 1000,
+    "recent_days": 3,
     "api_url": "http://export.arxiv.org/api/query",
     "mysql": {
         "enable": True,
@@ -67,7 +67,7 @@ LLM_FILTER_CONFIG = {
     "min_score": 60,
     "min_stars": 60,
     "save_all_papers": True,
-    "max_workers": 16,
+    "max_workers": 4,
     "openclaw": {
         "binary_path": "openclaw",
         "translation_agent_id": "paper2data-translation",
