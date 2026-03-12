@@ -1,0 +1,99 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Test
+test/
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Output
+output/
+
+# Backup files
+*.bak
+*.backup
+
+# Runtime Config (persistent local settings)
+runtime_config.json
+
+# Local config (contains API keys and secrets)
+config.local.json
+
+# Cache
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Windows device files (prevent git from trying to index nul)
+nul
+
+# Node (if building frontend)
+node_modules/
+
+# Database (local MySQL backups)
+*.sql
+*.sqlite
+*.db
+
+# Runtime data
+data/
+
+# Project config (contains API keys and secrets)
+config.py
+AGENTS.md
+CLAUDE.md
+ref/
+
+# Tests (local only)
+tests/
+
+# OpenClaw framework files (auto-generated templates)
+.openclaw/
+BOOTSTRAP.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+skills/

@@ -1,0 +1,27 @@
+# ArXiv论文推送系统 v3.0 依赖
+
+# Web框架
+fastapi>=0.115.0
+uvicorn>=0.32.0
+pydantic>=2.0.0
+
+# arXiv API解析
+feedparser>=6.0.0
+
+# 定时任务
+schedule>=1.2.0
+
+# 时区支持
+pytz>=2024.1
+
+# OpenClaw CLI 通过系统命令调用，无需额外 SDK 依赖
+requests>=2.31.0
+
+# LLM调用
+openai>=1.0.0
+
+# MySQL数据库
+pymysql>=1.1.0
+
+# 测试
+pytest>=8.0.0

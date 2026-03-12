@@ -1,0 +1,45 @@
+{
+  "database": {
+    "engine": "sqlite",
+    "sqlite_path": "data/paper2data.db"
+  },
+  "research_description": "请在这里填写你的研究方向描述",
+  "arxiv": {
+    "keywords": ["cs.CL", "cs.CV", "cs.LG"]
+  },
+  "llm_filter": {
+    "enable": true,
+    "backend": "openclaw",
+    "api_key": "",
+    "base_url": "https://api.siliconflow.cn/v1/",
+    "model": "deepseek-ai/DeepSeek-V3.2",
+    "openclaw": {
+      "binary_path": "openclaw",
+      "translation_agent_id": "translation",
+      "filter_agent_id": "filter",
+      "review_agent_id": "graduate-student",
+      "translation_model": "",
+      "filter_model": "",
+      "review_model": "",
+      "timeout_seconds": 120,
+      "use_local": false
+    }
+  },
+  "openclaw": {
+    "session_key": "main",
+    "binary_path": "openclaw",
+    "timeout_seconds": 120,
+    "enable_graduate_student_briefing": false
+  },
+  "schedule": {
+    "enable_schedule": true,
+    "fetch_papers": {
+      "enable": true,
+      "time": "02:00"
+    },
+    "push_papers": {
+      "enable": true,
+      "times": ["09:00"]
+    }
+  }
+}
