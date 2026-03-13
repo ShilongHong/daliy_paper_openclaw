@@ -231,7 +231,7 @@ def run_delivery(logger: logging.Logger | None = None) -> WorkflowResult:
                 delivery_config.get("binary_path", "openclaw"), "openclaw"
             ),
             session_key=_to_str(delivery_config.get("session_key", "main"), "main"),
-            timeout_seconds=_to_int(delivery_config.get("timeout_seconds", 120), 120),
+        timeout_seconds=_to_int(delivery_config.get("timeout_seconds", 300), 300),
         )
         success = notifier.send_papers(papers)
 

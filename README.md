@@ -83,6 +83,8 @@ cp config.local.example.json config.local.json
 python app.py
 ```
 
+注意：`cp config.local.example.json config.local.json` 只会复制示例配置，不会自动创建 OpenClaw agents；如果你要使用 `paper2data-translation`、`paper2data-filter`、`paper2data-graduate-student`，请运行 init wizard 或手动创建。
+
 启动后验证：
 
 ```bash

@@ -76,7 +76,7 @@ LLM_FILTER_CONFIG = {
         "translation_model": "",
         "filter_model": "",
         "review_model": "",
-        "timeout_seconds": 120,
+        "timeout_seconds": 300,
         "use_local": False,
     },
 }
@@ -87,7 +87,7 @@ OPENCLAW_CONFIG = {
     "delivery_mode": "cli-session",
     "binary_path": "openclaw",
     "session_key": "main",
-    "timeout_seconds": 120,
+    "timeout_seconds": 300,
     "max_papers_per_message": 5,
     "include_full_abstract": False,
     "enable_graduate_student_briefing": False,

@@ -436,7 +436,7 @@ async def get_all_config():
                 "delivery_mode": openclaw_config.get("delivery_mode", "cli-session"),
                 "session_key": openclaw_config.get("session_key", "main"),
                 "binary_path": openclaw_config.get("binary_path", "openclaw"),
-                "timeout_seconds": openclaw_config.get("timeout_seconds", 120),
+                "timeout_seconds": openclaw_config.get("timeout_seconds", 300),
                 "max_papers_per_message": openclaw_config.get(
                     "max_papers_per_message", 5
                 ),

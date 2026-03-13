@@ -97,7 +97,7 @@ Follow these steps.
 - `translation_agent_id` — 翻译任务的 agent（默认：`paper2data-translation`）
 - `filter_agent_id` — 论文打分的 agent（默认：`paper2data-filter`）
 - `review_agent_id` — 深度分析的 agent（默认：`paper2data-graduate-student`，可留默认）
-- `timeout_seconds` — LLM 响应超时时间（默认：`120`）
+- `timeout_seconds` — LLM 响应超时时间（默认：`300`）
 
 安装阶段**不要强制询问**每个 agent 的模型，也不要一开始就展开高级 OpenClaw 路由配置。优先先让系统跑起来，再在后续高级配置里调整。
 
@@ -270,14 +270,14 @@ Minimal SQLite + OpenClaw delivery config:
       "translation_model": "",
       "filter_model": "",
       "review_model": "",
-      "timeout_seconds": 120,
+      "timeout_seconds": 300,
       "use_local": false
     }
   },
   "openclaw": {
     "session_key": "<session_key from Q5>",
     "binary_path": "openclaw",
-    "timeout_seconds": 120,
+    "timeout_seconds": 300,
     "enable_graduate_student_briefing": false
   },
   "schedule": {
@@ -355,7 +355,7 @@ curl -X PUT http://127.0.0.1:<new_port>/api/config/llm_filter \
         "translation_model": "",
         "filter_model": "",
         "review_model": "",
-        "timeout_seconds": 120,
+        "timeout_seconds": 300,
         "use_local": false
       }
     }

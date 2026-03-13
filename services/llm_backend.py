@@ -52,7 +52,7 @@ class OpenClawBackend:
         openclaw_map = openclaw_config if isinstance(openclaw_config, dict) else {}
         self.binary_path = str(openclaw_map.get("binary_path", "openclaw"))
         self.agent_id = self._resolve_agent_id(openclaw_map, purpose)
-        self.timeout_seconds = int(openclaw_map.get("timeout_seconds", 120))
+        self.timeout_seconds = int(openclaw_map.get("timeout_seconds", 300))
         self.use_local = bool(openclaw_map.get("use_local", False))
         self.runner = runner
 
@@ -64,9 +64,9 @@ class OpenClawBackend:
         }
         key = purpose_key_map.get(purpose, "agent_id")
         fallback_map = {
-            "translation": "translation",
-            "filter": "filter",
-            "review": "graduate-student",
+            "translation": "paper2data-translation",
+            "filter": "paper2data-filter",
+            "review": "paper2data-graduate-student",
         }
         return str(
             openclaw_map.get(

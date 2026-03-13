@@ -204,9 +204,11 @@ class SQLiteStore(PaperStore):
             ).fetchall()
             rows = cast(list[sqlite3.Row], rows)
 
+        papers = [dict(row) for row in rows]
         return {
             "total": total,
-            "items": [dict(row) for row in rows],
+            "papers": papers,
+            "items": papers,
         }
 
     def get_relevant_papers_by_date(self, publication_year: str) -> list[PaperRecord]:

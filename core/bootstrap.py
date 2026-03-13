@@ -108,7 +108,7 @@ def _ensure_openclaw_agent(
     agent_id: str,
     model_id: str,
     workspace_dir: str,
-) -> bool:
+) -> bool | tuple[bool, str]:
     if agent_id in _list_openclaw_agents(binary_path):
         return True
 
@@ -131,7 +131,11 @@ def _ensure_openclaw_agent(
         timeout=60,
         check=False,
     )
-    return result.returncode == 0
+    if result.returncode == 0:
+        return True
+
+    reason = (result.stderr or result.stdout or "未知错误").strip()
+    return False, reason
 
 
 def build_local_config(
@@ -140,7 +144,7 @@ def build_local_config(
     mysql_config: dict[str, object] | None = None,
     session_key: str = "main",
     binary_path: str = "openclaw",
-    timeout_seconds: int = 120,
+    timeout_seconds: int = 300,
     research_description: str = "",
     arxiv_keywords: list[str] | None = None,
     llm_filter: dict[str, object] | None = None,
@@ -216,7 +220,7 @@ def run_init_wizard() -> Path:
         input(f"OpenClaw 命令路径（默认 {discovered_binary}）: ").strip()
         or discovered_binary
     )
-    timeout_seconds = _prompt_int("OpenClaw 超时秒数", 120)
+    timeout_seconds = _prompt_int("OpenClaw 超时秒数", 300)
 
     research_description = input("研究方向描述（可留空，后续在 Web 中填写）: ").strip()
     arxiv_keywords = _prompt_list(
@@ -277,9 +281,28 @@ def run_init_wizard() -> Path:
         )
 
         workspace_dir = str(Path(__file__).resolve().parents[1])
-        _ensure_openclaw_agent(binary_path, translation_agent_id, translation_model, workspace_dir)
-        _ensure_openclaw_agent(binary_path, filter_agent_id, filter_model, workspace_dir)
-        _ensure_openclaw_agent(binary_path, review_agent_id, review_model, workspace_dir)
+        for agent_id, model_id in [
+            (translation_agent_id, translation_model),
+            (filter_agent_id, filter_model),
+            (review_agent_id, review_model),
+        ]:
+            ensure_result = _ensure_openclaw_agent(
+                binary_path,
+                agent_id,
+                model_id,
+                workspace_dir,
+            )
+            if ensure_result is True:
+                continue
+
+            reason = ""
+            if isinstance(ensure_result, tuple):
+                _, reason = ensure_result
+
+            message = f"创建 OpenClaw Agent 失败: {agent_id}"
+            if reason:
+                message = f"{message}，原因: {reason}"
+            raise RuntimeError(message)
 
         llm_filter["openclaw"] = {
             "binary_path": binary_path,
@@ -289,7 +312,7 @@ def run_init_wizard() -> Path:
             "translation_model": translation_model,
             "filter_model": filter_model,
             "review_model": review_model,
-            "timeout_seconds": _prompt_int("LLM OpenClaw 超时秒数", 120),
+            "timeout_seconds": _prompt_int("LLM OpenClaw 超时秒数", 300),
             "use_local": _prompt_bool("LLM 是否优先使用本地 OpenClaw", False),
         }
 

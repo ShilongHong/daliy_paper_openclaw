@@ -21,14 +21,14 @@
       "translation_model": "",
       "filter_model": "",
       "review_model": "",
-      "timeout_seconds": 120,
+      "timeout_seconds": 300,
       "use_local": false
     }
   },
   "openclaw": {
     "session_key": "main",
     "binary_path": "openclaw",
-    "timeout_seconds": 120,
+    "timeout_seconds": 300,
     "enable_graduate_student_briefing": false
   },
   "schedule": {
