@@ -1,8 +1,5 @@
 import logging
-import threading
-import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
 from typing import cast
 
 from delivery.openclaw_notifier import OpenClawNotifier
@@ -60,136 +57,86 @@ def run_fetch_papers(logger: logging.Logger | None = None) -> WorkflowResult:
     try:
         arxiv_config = get_config("arxiv", logger=active_logger)
         llm_config = get_config("llm_filter", logger=active_logger)
-
-        arxiv_service = ArxivService(config=arxiv_config)
-        llm_service = None
-        translation_service = None
         min_stars = _to_int(llm_config.get("min_stars", 3), 3)
 
-        if llm_config.get("enable", True):
-            llm_service = LLMFilterService(config=llm_config)
-            translation_service = TranslationService(config=llm_config)
-
+        llm_service = (
+            LLMFilterService(config=llm_config)
+            if llm_config.get("enable", True)
+            else None
+        )
+        translation_service = (
+            TranslationService(config=llm_config)
+            if llm_config.get("enable", True)
+            else None
+        )
         queue_service = PaperQueueService()
+        arxiv_service = ArxivService(config=arxiv_config)
         processed_count = 0
-        processing_lock = threading.Lock()
-        stop_processing = threading.Event()
-        executor = ThreadPoolExecutor(max_workers=1)
 
-        def _background_processor() -> None:
+        def _process_batch(batch: list[PaperRecord]) -> None:
             nonlocal processed_count
 
-            active_logger.info("🔄 后台处理线程已启动，持续从数据库读取未处理论文...")
-            batch_size = 50
+            active_logger.info(f"📝 新抓到 {len(batch)} 篇论文，立即开始解析...")
 
-            while not stop_processing.is_set():
-                unprocessed = get_unprocessed_raw_papers(limit=batch_size)
-                if not unprocessed:
-                    if stop_processing.is_set():
-                        break
-                    active_logger.info("数据库中暂无未处理论文，等待5秒...")
-                    _ = stop_processing.wait(5)
-                    continue
-
-                active_logger.info(
-                    f"📝 发现 {len(unprocessed)} 篇未处理论文，开始处理..."
-                )
-
-                try:
-                    failed_papers = []
-                    if llm_service:
-                        filtered, failed_papers = llm_service.filter_papers(unprocessed)
-                        qualified = [
-                            paper
-                            for paper in filtered
-                            if paper.get("Stars", 0) >= min_stars
-                        ]
-                    else:
-                        filtered = unprocessed
-                        qualified = unprocessed
-
-                    if qualified:
-                        for index, paper in enumerate(qualified, start=1):
-                            if stop_processing.is_set():
-                                break
-                            try:
-                                active_logger.info(
-                                    f"  [后台 {index}/{len(qualified)}] 翻译: {str(paper.get('Title', ''))[:50]}..."
-                                )
-                                translated = (
-                                    cast(
-                                        PaperRecord,
-                                        translation_service.translate_paper(paper),
-                                    )
-                                    if translation_service
-                                    else paper
-                                )
-                                _ = save_relevant_papers_to_mysql([translated])
-                                translated["ID"] = translated.get("DOI", "")
-                                _ = queue_service.enqueue_papers([translated])
-
-                                with processing_lock:
-                                    processed_count += 1
-
-                                active_logger.info(
-                                    f"  [后台 {index}/{len(qualified)}] 已保存 (总计 {processed_count} 篇)"
-                                )
-                            except Exception as exc:
-                                active_logger.error(f"  [后台处理] 失败: {exc}")
-
-                    successfully_processed = [
-                        paper.get("DOI")
-                        for paper in (filtered if llm_service else unprocessed)
-                        if paper.get("DOI")
+            try:
+                if llm_service:
+                    filtered, failed_papers = llm_service.filter_papers(batch)
+                    qualified = [
+                        paper
+                        for paper in filtered
+                        if paper.get("Stars", 0) >= min_stars
                     ]
-                    if successfully_processed:
-                        _ = mark_papers_as_processed(
-                            [str(doi) for doi in successfully_processed]
-                        )
-                        active_logger.info(
-                            f"✅ 已标记 {len(successfully_processed)} 篇为已处理"
-                        )
-
                     if failed_papers:
                         active_logger.warning(
-                            f"⚠️ {len(failed_papers)} 篇评估失败，保持未处理状态，等待重新评估"
+                            f"⚠️ {len(failed_papers)} 篇评估失败，保持未处理状态"
                         )
-                except Exception as exc:
-                    active_logger.error(f"后台处理批次出错: {exc}")
-                    _ = stop_processing.wait(2)
+                else:
+                    filtered = batch
+                    qualified = batch
 
-            active_logger.info("🛑 后台处理线程已停止")
+                for index, paper in enumerate(qualified, start=1):
+                    try:
+                        active_logger.info(
+                            f"  [{index}/{len(qualified)}] 翻译: {str(paper.get('Title', ''))[:50]}..."
+                        )
+                        translated = (
+                            cast(PaperRecord, translation_service.translate_paper(paper))
+                            if translation_service
+                            else paper
+                        )
+                        _ = save_relevant_papers_to_mysql([translated])
+                        translated["ID"] = translated.get("DOI", "")
+                        _ = queue_service.enqueue_papers([translated])
+                        processed_count += 1
+                        active_logger.info(
+                            f"  [{index}/{len(qualified)}] 已保存 (总计 {processed_count} 篇)"
+                        )
+                    except Exception as exc:
+                        active_logger.error(f"  [{index}/{len(qualified)}] 处理失败: {exc}")
 
-        _ = executor.submit(_background_processor)
+                successfully_processed = [
+                    str(paper.get("DOI"))
+                    for paper in (filtered if llm_service else batch)
+                    if paper.get("DOI")
+                ]
+                if successfully_processed:
+                    _ = mark_papers_as_processed(successfully_processed)
+                    active_logger.info(f"✅ 已标记 {len(successfully_processed)} 篇为已处理")
+
+            except Exception as exc:
+                active_logger.error(f"解析批次出错: {exc}")
 
         active_logger.info("🚀 开始获取新论文...")
-        search_papers = cast(SearchPapersCallable, arxiv_service.search_papers)
-        all_papers = search_papers()
+        all_papers = arxiv_service.search_papers(batch_callback=_process_batch)
 
         if all_papers:
-            active_logger.info(f"✅ 共获取 {len(all_papers)} 篇新论文，已保存到数据库")
+            active_logger.info(f"✅ 共获取 {len(all_papers)} 篇新论文，处理了 {processed_count} 篇相关论文")
         else:
             active_logger.info("没有找到新论文")
 
-        active_logger.info("等待后台处理线程处理完所有论文...")
-        max_wait = 300
-        wait_count = 0
-        while wait_count < max_wait:
-            unprocessed = get_unprocessed_raw_papers(limit=1)
-            if not unprocessed:
-                active_logger.info("✅ 所有论文已处理完成")
-                break
-            time.sleep(1)
-            wait_count += 1
-            if wait_count % 10 == 0:
-                active_logger.info(f"  仍有未处理论文，已等待 {wait_count} 秒...")
-
-        stop_processing.set()
-        executor.shutdown(wait=True)
-
         return {
             "status": "success",
-            "message": f"获取了 {len(all_papers) if all_papers else 0} 篇新论文，共处理了 {processed_count} 篇合格论文",
+            "message": f"获取了 {len(all_papers) if all_papers else 0} 篇新论文，处理了 {processed_count} 篇相关论文",
             "count": processed_count,
         }
     except Exception as exc:
@@ -198,7 +145,6 @@ def run_fetch_papers(logger: logging.Logger | None = None) -> WorkflowResult:
 
         traceback.print_exc()
         return {"status": "error", "message": str(exc), "count": 0}
-
 
 def run_delivery(logger: logging.Logger | None = None) -> WorkflowResult:
     active_logger = _get_logger(logger)
