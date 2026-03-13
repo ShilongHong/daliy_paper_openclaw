@@ -310,7 +310,65 @@ Adapt the template above based on the user's actual answers. Remove unused field
 - API 接口：`PUT /api/config/{name}`
 - 删除数据库中 `system_config` 对应行后重启（会重新从文件迁移）
 
-### Step 6: Verify OpenClaw access
+### Step 6: 创建 OpenClaw Agents（仅 openclaw 后端）
+
+如果用户在 Q4 选择了 `openclaw` 作为 LLM 后端，需要在启动前创建三个专用 agent。每个 agent 负责一类任务，可以绑定不同模型。
+
+#### 6a. 检查已有 agents
+
+```bash
+openclaw agents list
+```
+
+如果输出中已经包含用户指定的三个 agent ID（例如 `daliy_paper-filter`、`daliy_paper-translation`、`daliy_paper-graduate-student`），跳过创建。
+
+#### 6b. 创建 agents
+
+使用用户在 Q4 中确认的 agent ID。默认名称带 `daliy_paper-` 前缀，避免与用户已有 agent 冲突。用户可以自定义名称，只要和 `config.local.json` 中写入的 `filter_agent_id`、`translation_agent_id`、`review_agent_id` 保持一致即可。
+
+`<project_dir>` 替换为项目实际路径（即 `git clone` 后的目录绝对路径）。
+
+```bash
+openclaw agents add <filter_agent_id> --workspace <project_dir> --non-interactive
+openclaw agents add <translation_agent_id> --workspace <project_dir> --non-interactive
+openclaw agents add <review_agent_id> --workspace <project_dir> --non-interactive
+```
+
+使用默认名称的示例：
+
+```bash
+openclaw agents add daliy_paper-filter --workspace /home/yourname/daliy_paper_openclaw --non-interactive
+openclaw agents add daliy_paper-translation --workspace /home/yourname/daliy_paper_openclaw --non-interactive
+openclaw agents add daliy_paper-graduate-student --workspace /home/yourname/daliy_paper_openclaw --non-interactive
+```
+
+如果需要为某个 agent 指定模型（可选），加 `--model` 参数：
+
+```bash
+openclaw agents add daliy_paper-filter --workspace <project_dir> --model bailian/MiniMax-M2.5 --non-interactive
+```
+
+#### 6c. 验证创建结果
+
+```bash
+openclaw agents list
+```
+
+确认输出中包含刚创建的三个 agent。
+
+#### 6d. 确保 config.local.json 中的 agent ID 与实际创建的名称一致
+
+如果用户使用了自定义名称（非默认的 `daliy_paper-*`），回到 `config.local.json` 确认 `llm_filter.openclaw` 下的三个 ID 字段与实际创建的 agent 名称完全匹配：
+
+```json
+"openclaw": {
+  "translation_agent_id": "<实际创建的翻译 agent 名称>",
+  "filter_agent_id": "<实际创建的筛选 agent 名称>",
+  "review_agent_id": "<实际创建的精读 agent 名称>"
+}
+```
+
+### Step 7: Verify OpenClaw access
 
 ```bash
 openclaw sessions --json
@@ -322,7 +380,7 @@ Optional smoke test:
 openclaw agent --agent main --json --message "Reply with exactly: ok"
 ```
 
-### Step 7: Start the app
+### Step 8: Start the app
 
 ```bash
 python app.py
@@ -334,14 +392,14 @@ If port `20001` is already in use, use other port:
 python app.py --port <new_port>
 ```
 
-### Step 8: Verify setup
+### Step 9: Verify setup
 
 ```bash
 curl http://127.0.0.1:<new_port>/api/health
 curl http://127.0.0.1:<new_port>/api/config/all
 ```
 
-### Step 9: Optional runtime configuration
+### Step 10: Optional runtime configuration
 
 If the user chose OpenClaw as the LLM backend, configure it after startup:
 
@@ -376,7 +434,7 @@ curl -X PUT http://127.0.0.1:<new_port>/api/config/llm_filter \
   }'
 ```
 
-### Step 10: Manual verification
+### Step 11: Manual verification
 
 Run at least one of these after install:
 
