@@ -253,16 +253,16 @@ def run_init_wizard() -> Path:
         available_models = _discover_openclaw_models(binary_path)
         default_model = available_models[0] if available_models else ""
         translation_agent_id = (
-            input("翻译 Agent ID（默认 translation）: ").strip()
-            or "translation"
+            input("翻译 Agent ID（默认 daliy_paper-translation）: ").strip()
+            or "daliy_paper-translation"
         )
         filter_agent_id = (
-            input("筛选 Agent ID（默认 filter）: ").strip()
-            or "filter"
+            input("筛选 Agent ID（默认 daliy_paper-filter）: ").strip()
+            or "daliy_paper-filter"
         )
         review_agent_id = (
-            input("精读 Agent ID（默认 graduate-student）: ").strip()
-            or "graduate-student"
+            input("精读 Agent ID（默认 daliy_paper-graduate-student）: ").strip()
+            or "daliy_paper-graduate-student"
         )
         translation_model = _prompt_model_choice(
             "翻译 Agent 模型",

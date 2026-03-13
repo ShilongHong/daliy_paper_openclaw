@@ -56,9 +56,9 @@ OpenClaw 使用本技能时，需要同时扮演两类角色：
 
 推荐默认值：
 
-- `translation`
-- `filter`
-- `graduate-student`
+- `daliy_paper-translation`
+- `daliy_paper-filter`
+- `daliy_paper-graduate-student`
 
 ### 3. “立即推送”通常只是启动后台任务
 
@@ -608,10 +608,10 @@ curl -X PUT http://127.0.0.1:20001/api/config/schedule \
 4. 投递 session key
 5. LLM 后端：`openai_compatible` 或 `openclaw`
 6. 如果使用 OpenClaw 后端：
-   - `binary_path`
-   - `translation_agent_id`
-   - `filter_agent_id`
-   - `review_agent_id`
+    - `binary_path`
+    - `translation_agent_id`（推荐 `daliy_paper-translation`）
+    - `filter_agent_id`（推荐 `daliy_paper-filter`）
+    - `review_agent_id`（推荐 `daliy_paper-graduate-student`）
    - 每个 agent 对应模型
    - `timeout_seconds`
    - `use_local`
@@ -631,17 +631,17 @@ curl -X POST http://127.0.0.1:20001/api/actions/deliver-now
 如果 OpenClaw 被用作 LLM 后端，建议使用多 agent 拆分：
 
 ```text
-translation        -> 标题/摘要翻译
-filter             -> 相关性筛选打分
-graduate-student   -> 深度简报补全
+daliy_paper-translation        -> 标题/摘要翻译
+daliy_paper-filter             -> 相关性筛选打分
+daliy_paper-graduate-student   -> 深度简报补全
 ```
 
 推荐模型分工：
 
 ```text
-translation        -> bailian/qwen3.5-plus
-filter             -> bailian/MiniMax-M2.5
-graduate-student   -> bailian/glm-5
+daliy_paper-translation        -> bailian/qwen3.5-plus
+daliy_paper-filter             -> bailian/MiniMax-M2.5
+daliy_paper-graduate-student   -> bailian/glm-5
 ```
 
 ## 常见失败模式
