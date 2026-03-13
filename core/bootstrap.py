@@ -208,7 +208,7 @@ def initialize_store(local_config_path: Path) -> None:
     store.init_schema()
 
 
-def run_init_wizard() -> Path:
+def run_init_wizard(current_session_key: str = "") -> Path:
     database_engine = (
         input("数据库类型（sqlite/mysql，默认 sqlite）: ").strip() or "sqlite"
     )
@@ -230,7 +230,13 @@ def run_init_wizard() -> Path:
             or "utf8mb4",
         }
 
-    session_key = input("OpenClaw session key（默认 main）: ").strip() or "main"
+    default_sk = current_session_key or "main"
+    if current_session_key:
+        print(f"检测到当前会话 session key: {current_session_key}")
+    session_key = (
+        input(f"OpenClaw 论文推送目标 session key（默认 {default_sk}）: ").strip()
+        or default_sk
+    )
     discovered_binary = _discover_openclaw_binary()
     if discovered_binary != "openclaw":
         print(f"检测到 OpenClaw 命令路径: {discovered_binary}")

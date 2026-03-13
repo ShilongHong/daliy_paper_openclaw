@@ -533,7 +533,35 @@ curl -X PUT http://127.0.0.1:20001/api/config/schedule \
 - 说明新的抓取/推送时间
 - 说明调度器已自动重载
 
-## 配置菜单设计
+### 15. 设置当前会话为论文推送目标
+
+触发示例：
+
+- "把当前会话设为推送目标"
+- "以后论文推到这里"
+- "用这个 session 接收论文"
+- "设置当前会话为论文推送"
+- "把推送目标改成我现在这个"
+
+执行：
+
+读取当前 session key（即你正在与用户对话的会话标识），然后更新配置：
+
+```bash
+curl -X PUT http://127.0.0.1:20001/api/config/openclaw \
+  -H 'Content-Type: application/json' \
+  --data '{"config": {"session_key": "<当前 session key>"}}'
+```
+
+当前 session key 可从 OpenClaw 工具上下文中获取（如 `currentSessionKey` 或当前 session 的标识字段）。
+
+回复要求：
+
+- 说明已将推送目标切换为当前会话
+- 列出新的 session key 值
+- 提醒这会影响后续所有定时和手动推送
+
+
 
 当用户只说“修改配置”时，OpenClaw 应使用统一菜单，避免自由发挥。
 
@@ -605,7 +633,7 @@ curl -X PUT http://127.0.0.1:20001/api/config/schedule \
 1. 数据库类型：`sqlite` 或 `mysql`
 2. 研究方向描述
 3. arXiv 关键词或分类
-4. 投递 session key
+4. 投递 session key（安装向导会自动把当前会话 session key 作为默认值，直接回车即可；如需推送到其他 session 再手动填写）
 5. LLM 后端：`openai_compatible` 或 `openclaw`
 6. 如果使用 OpenClaw 后端：
     - `binary_path`

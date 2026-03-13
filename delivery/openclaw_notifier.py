@@ -33,7 +33,36 @@ class OpenClawNotifier:
     def build_session_lookup_command(self) -> list[str]:
         return [self.binary_path, "sessions", "--json"]
 
+    def _parse_message_target(self) -> tuple[str, str] | None:
+        parts = self.session_key.split(":")
+        if len(parts) < 5:
+            return None
+        channel = parts[2]
+        chat_type = parts[3]
+        target_id = ":".join(parts[4:])
+        if chat_type == "direct":
+            target = f"{channel}:c2c:{target_id}"
+        elif chat_type in ("group", "channel"):
+            target = f"{channel}:{chat_type}:{target_id}"
+        else:
+            return None
+        return channel, target
+
     def build_send_command(self, content: str, session_id: str) -> list[str]:
+        parsed = self._parse_message_target()
+        if parsed:
+            channel, target = parsed
+            return [
+                self.binary_path,
+                "message",
+                "send",
+                "--channel",
+                channel,
+                "--target",
+                target,
+                "--message",
+                content,
+            ]
         return [
             self.binary_path,
             "agent",
@@ -41,6 +70,7 @@ class OpenClawNotifier:
             session_id,
             "--message",
             content,
+            "--deliver",
             "--timeout",
             str(self.timeout_seconds),
         ]
@@ -199,6 +229,37 @@ class OpenClawNotifier:
             lines.extend(["", "---", ""])
         return "\n".join(lines)
 
+    def _render_single_paper(self, paper: dict[str, object], index: int, total: int) -> str:
+        today = datetime.now().strftime("%Y-%m-%d")
+        title = paper.get("TitleCN") or paper.get("Title") or "未命名论文"
+        stars = paper.get("Stars", 0)
+        reason = paper.get("RelevanceReason") or "暂无推荐理由"
+        help_text = paper.get("PotentialHelp") or "暂无帮助说明"
+        author = paper.get("Author") or "未知作者"
+        affiliation = paper.get("Affiliation") or "未知单位"
+        abstract_cn = paper.get("AbstractCN") or paper.get("Abstract") or "暂无摘要"
+
+        lines = [
+            f"# 📚 [{index}/{total}] 今日论文推送 - {today}",
+            "",
+            f"## {title}",
+            "",
+            f"**📊 相关度评分**: {stars}分/100",
+            "",
+            f"**💡 推荐理由**: {reason}",
+            "",
+            f"**🎯 对我的帮助**: {help_text}",
+            "",
+            f"**👥 作者**: {author}",
+            "",
+            f"**🏛️ 单位**: {affiliation}",
+            "",
+            f"**📝 摘要**: {abstract_cn}",
+        ]
+        if paper.get("Link"):
+            lines.extend(["", f"**🔗 链接**: {paper['Link']}"])
+        return "\n".join(lines)
+
     def _normalize_points(self, value: object, fallback: str) -> list[str]:
         if isinstance(value, list):
             normalized = [str(item).strip() for item in value if str(item).strip()]
@@ -207,11 +268,21 @@ class OpenClawNotifier:
         return [fallback]
 
     def send_papers(self, papers: list[dict[str, object]]) -> bool:
-        content = self.render_digest(papers)
         session_id = self.resolve_session_id()
         if not session_id:
             return False
 
-        command = self.build_send_command(content, session_id)
-        result = self._run_command(command)
-        return getattr(result, "returncode", 1) == 0
+        success_count = 0
+        total = len(papers)
+        for index, paper in enumerate(papers, start=1):
+            if self.enable_graduate_student_briefing and self.briefing_service:
+                enriched = self.briefing_service.enrich_papers([paper])
+                content = self.render_digest(enriched)
+            else:
+                content = self._render_single_paper(paper, index, total)
+            command = self.build_send_command(content, session_id)
+            result = self._run_command(command)
+            if getattr(result, "returncode", 1) == 0:
+                success_count += 1
+
+        return success_count > 0
