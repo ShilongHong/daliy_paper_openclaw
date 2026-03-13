@@ -23,7 +23,7 @@ Follow these steps.
 
 ### Step 0: 询问用户配置
 
-**在开始安装之前，按以下顺序向用户询问所有配置问题。**
+**在开始安装之前，你必须按以下顺序向用户询问所有配置问题。**
 
 ---
 
@@ -442,3 +442,47 @@ Run at least one of these after install:
 curl -X POST http://127.0.0.1:<new_port>/api/actions/process-now
 curl -X POST http://127.0.0.1:<new_port>/api/actions/deliver-now
 ```
+
+---
+
+## 🎉 安装完成！
+
+恭喜！**daliy_paper_openclaw** 已成功安装并启动。
+
+**Agent 须知：请执行以下命令，并将完整配置内容直接输出给用户，让用户确认配置是否正确：**
+
+```bash
+curl http://127.0.0.1:<port>/api/config/all
+```
+
+---
+
+### 修改配置
+
+如果需要修改任何配置，有两种方式：
+
+**方式一（推荐）：直接告诉我**
+
+在这个对话中直接说明你想改什么，我会帮你完成修改。例如：
+- "把推送时间改成 08:00 和 20:00"
+- "把研究方向描述改成……"
+- "换一个 LLM 模型"
+
+**方式二：通过后端 API 直接修改**
+
+```bash
+curl -X PUT http://127.0.0.1:<port>/api/config/<配置名称> \
+  -H 'Content-Type: application/json' \
+  --data '{"config": { ... }}'
+```
+
+配置名称可以是：`research_description`、`arxiv`、`llm_filter`、`openclaw`、`schedule` 等。
+
+---
+
+如果配置没有问题，系统将按你设置的定时任务自动运行：
+
+- **抓取论文**：每天在设定的 `fetch_papers.time`（默认 `02:00`）从 arXiv 拉取最新论文，并经 LLM 打分筛选
+- **推送论文**：在设定的 `push_papers.times`（默认 `["09:00"]`）将打分后的优质论文推送到你的 OpenClaw session
+
+无需任何手动操作，它会在后台安静地为你工作。🚀
