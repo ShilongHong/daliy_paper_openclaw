@@ -28,7 +28,7 @@ class OpenClawNotifier:
         self.timeout_seconds = timeout_seconds
         self.enable_graduate_student_briefing = enable_graduate_student_briefing
         self.runner = runner
-        self.briefing_service = GraduateStudentBriefingService()
+        self.briefing_service = GraduateStudentBriefingService() if enable_graduate_student_briefing else None
 
     def build_session_lookup_command(self) -> list[str]:
         return [self.binary_path, "sessions", "--json"]
@@ -100,6 +100,7 @@ class OpenClawNotifier:
         if not self.enable_graduate_student_briefing:
             return self._render_standard_digest(papers)
 
+        assert self.briefing_service is not None
         enriched_papers = self.briefing_service.enrich_papers(papers)
         today = datetime.now().strftime("%Y-%m-%d")
         lines = [f"# 📚 Graduate Student Briefing | {today}", "", "---", ""]

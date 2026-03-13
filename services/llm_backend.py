@@ -1,5 +1,7 @@
 import json
 import subprocess
+import threading
+import uuid
 from collections.abc import Sequence
 from typing import Any, cast
 
@@ -42,11 +44,15 @@ class OpenAICompatibleBackend:
 
 
 class OpenClawBackend:
+    # 串行锁：防止多个线程同时调用同一 agent，避免 session 文件锁竞争
+    _call_lock: threading.Lock = threading.Lock()
+
     def __init__(
         self,
         config: dict[str, object],
         purpose: str = "filter",
         runner=subprocess.run,
+        http_client=None,
     ):
         openclaw_config = config.get("openclaw")
         openclaw_map = openclaw_config if isinstance(openclaw_config, dict) else {}
@@ -55,6 +61,10 @@ class OpenClawBackend:
         self.timeout_seconds = int(openclaw_map.get("timeout_seconds", 300))
         self.use_local = bool(openclaw_map.get("use_local", False))
         self.runner = runner
+        self.http_client = http_client
+        self._transport = str(openclaw_map.get("transport", "cli"))
+        self._gateway_base_url = str(openclaw_map.get("gateway_base_url", ""))
+        self._gateway_token = str(openclaw_map.get("gateway_token", ""))
 
     def _resolve_agent_id(self, openclaw_map: dict[str, object], purpose: str) -> str:
         purpose_key_map = {
@@ -85,11 +95,14 @@ class OpenClawBackend:
         return "\n\n".join(sections)
 
     def _build_command(self, prompt: str) -> list[str]:
+        session_id = str(uuid.uuid4())
         command = [
             self.binary_path,
             "agent",
             "--agent",
             self.agent_id,
+            "--session-id",
+            session_id,
             "--json",
             "--message",
             prompt,
@@ -143,17 +156,46 @@ class OpenClawBackend:
         _ = temperature
         _ = max_tokens
         prompt = self._build_prompt(messages)
-        result = self.runner(
-            self._build_command(prompt),
-            capture_output=True,
-            text=True,
-            timeout=self.timeout_seconds,
-            check=False,
-        )
+        if self._transport == "responses_http" and self.http_client is not None:
+            return self._generate_via_http(prompt)
+        with OpenClawBackend._call_lock:
+            result = self.runner(
+                self._build_command(prompt),
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+                check=False,
+            )
         if getattr(result, "returncode", 1) != 0:
             stderr = getattr(result, "stderr", "") or getattr(result, "stdout", "")
             raise RuntimeError(f"OpenClaw 调用失败: {stderr.strip()}")
         return self._extract_text(getattr(result, "stdout", "") or "")
+
+    def _generate_via_http(self, prompt: str) -> str:
+        response = self.http_client.post(
+            f"{self._gateway_base_url}/v1/responses",
+            headers={
+                "Authorization": f"Bearer {self._gateway_token}",
+                "Content-Type": "application/json",
+                "x-openclaw-agent-id": self.agent_id,
+            },
+            json={
+                "model": f"openclaw:{self.agent_id}",
+                "input": prompt,
+            },
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        for item in payload.get("output", []):
+            if not isinstance(item, dict) or item.get("type") != "message":
+                continue
+            for part in item.get("content", []):
+                if isinstance(part, dict) and part.get("type") == "output_text":
+                    text = part.get("text")
+                    if isinstance(text, str) and text:
+                        return text
+        raise ValueError("OpenClaw HTTP 响应中未找到可解析的文本内容")
 
 
 def create_llm_backend(config: dict[str, object], purpose: str = "filter"):
