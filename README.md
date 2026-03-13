@@ -97,6 +97,8 @@ openclaw sessions --json
 
 项目配置分 4 层：默认配置、`config.local.json`、数据库运行时配置、Web/API 配置。
 
+**注意**：首次启动时 `config.local.json` 会被自动迁移到数据库。此后数据库为唯一配置源，再改 `config.local.json` 不会生效。变更已运行系统的配置请用 Web 界面或 `PUT /api/config/{name}` 接口。
+
 安装时最重要的是这些：
 
 - `research_description`：你的研究方向描述

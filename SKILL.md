@@ -652,11 +652,11 @@ daliy_paper-graduate-student   -> bailian/glm-5
 
 ### 2. 配置改了，但运行结果没变
 
-优先检查：
+首次启动时 `config.local.json` 会被自动迁移到数据库 `system_config` 表。此后数据库为唯一配置源，再改 `config.local.json` 不会生效。优先检查：
 
-- 是否读到了运行时配置覆盖
+- 数据库里的运行时配置是否仍是旧值（通过 `GET /api/config/all` 查看）
 - 是否改错了配置组
-- 是否误以为 `config.local.json` 会覆盖数据库运行时配置
+- 正确做法：通过 `PUT /api/config/{name}` 或 Web 界面修改
 
 ### 3. 任务只启动了，但你误报为完成
 

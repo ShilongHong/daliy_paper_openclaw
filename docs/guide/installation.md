@@ -304,6 +304,12 @@ Minimal SQLite + OpenClaw delivery config:
 
 Adapt the template above based on the user's actual answers. Remove unused fields (e.g. if using `openai_compatible`, the `openclaw` block inside `llm_filter` can use defaults).
 
+**配置优先级说明**：首次启动时，`config.local.json` 的内容会被自动迁移到数据库 `system_config` 表。此后数据库成为唯一配置源，再修改 `config.local.json` **不会生效**。如果需要变更已运行系统的配置，必须通过以下方式之一：
+
+- Web 管理界面的配置页面
+- API 接口：`PUT /api/config/{name}`
+- 删除数据库中 `system_config` 对应行后重启（会重新从文件迁移）
+
 ### Step 6: Verify OpenClaw access
 
 ```bash
