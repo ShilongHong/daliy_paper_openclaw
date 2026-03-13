@@ -125,6 +125,21 @@ def _prompt_model_choice(prompt: str, models: list[str], default: str) -> str:
     return answer
 
 
+def _generate_scoring_anchors(
+    llm_filter: dict[str, object], research_description: str
+) -> str:
+    if not research_description.strip() or not llm_filter.get("enable", True):
+        return ""
+
+    from services.llm_filter_service import LLMFilterService
+
+    generator = LLMFilterService(config=llm_filter)
+    anchors = generator.generate_scoring_anchors(research_description).strip()
+    if not anchors:
+        raise RuntimeError("LLM 未返回评分锚点")
+    return anchors
+
+
 def _ensure_openclaw_agent(
     binary_path: str,
     agent_id: str,
@@ -344,6 +359,41 @@ def run_init_wizard(current_session_key: str = "") -> Path:
             "timeout_seconds": _prompt_int("LLM OpenClaw 超时秒数", 300),
             "use_local": _prompt_bool("LLM 是否优先使用本地 OpenClaw", False),
         }
+
+    if llm_enabled and research_description:
+        while True:
+            print("正在根据研究方向生成评分锚点...")
+            try:
+                anchors = _generate_scoring_anchors(llm_filter, research_description)
+            except Exception as exc:
+                print(f"评分锚点生成失败: {exc}")
+                skip_generation = _prompt_bool("是否跳过自动生成评分锚点", True)
+                if skip_generation:
+                    break
+                continue
+
+            print("\n生成的评分锚点：\n")
+            print(anchors)
+            while True:
+                answer = (
+                    input("\n确认使用此锚点？（Y=确认 / n=重新生成 / s=跳过）: ")
+                    .strip()
+                    .lower()
+                )
+                if answer in {"", "y", "yes"}:
+                    llm_filter["scoring_anchors"] = anchors
+                    break
+                if answer in {"n", "no"}:
+                    break
+                if answer == "s":
+                    anchors = ""
+                    break
+                print("输入无效，请输入 Y、n 或 s。")
+
+            if llm_filter.get("scoring_anchors") == anchors and anchors:
+                break
+            if not anchors:
+                break
 
     enable_schedule = _prompt_bool("是否启用定时任务", True)
     schedule: dict[str, object] = {

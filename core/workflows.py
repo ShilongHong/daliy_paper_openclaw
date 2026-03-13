@@ -126,7 +126,7 @@ def run_fetch_papers(logger: logging.Logger | None = None) -> WorkflowResult:
             except Exception as exc:
                 active_logger.error(f"解析批次出错: {exc}")
 
-        active_logger.info("🚀 开始获取新论文...")
+        active_logger.info("🚀 开始获取新论文...，将在整批论文筛选并翻译完成后将相关论文存入papers_relevant表中。")
         all_papers = arxiv_service.search_papers(batch_callback=_process_batch)
 
         if all_papers:

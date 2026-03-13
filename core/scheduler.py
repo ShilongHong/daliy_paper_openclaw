@@ -81,7 +81,7 @@ class PaperScheduler:
         self.running = True
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
-        self.logger.info("✅ 后台调度器已启动")
+        self.logger.info("✅ 后台调度器已启动，将在整批论文筛选并翻译完成后将相关论文存入papers_relevant表中。")
 
     def stop(self) -> None:
         self.running = False

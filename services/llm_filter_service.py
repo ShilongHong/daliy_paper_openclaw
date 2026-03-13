@@ -31,6 +31,25 @@ def get_research_description() -> str:
     return RESEARCH_DESCRIPTION
 
 
+def get_scoring_anchors() -> str:
+    try:
+        from services.storage_service import get_all_configs_from_db
+
+        configs = get_all_configs_from_db()
+        llm_filter = configs.get("llm_filter", {}) if configs else {}
+        if isinstance(llm_filter, dict):
+            scoring_anchors = llm_filter.get("scoring_anchors", "")
+            if isinstance(scoring_anchors, str) and scoring_anchors.strip():
+                return scoring_anchors.strip()
+    except Exception as e:
+        logger.warning(f"从数据库获取评分锚点失败: {e}")
+
+    scoring_anchors = LLM_FILTER_CONFIG.get("scoring_anchors", "")
+    if isinstance(scoring_anchors, str) and scoring_anchors.strip():
+        return scoring_anchors.strip()
+    return ""
+
+
 class LLMFilterService:
     """LLM论文筛选服务类"""
 
@@ -97,7 +116,7 @@ class LLMFilterService:
 """
 
     # 评分锚点关键词
-    SCORING_ANCHORS = """
+    DEFAULT_SCORING_ANCHORS = """
 ## 评分参考锚点
 
 ### 高分信号（每项可得20-25分）
@@ -125,10 +144,7 @@ open-source implementation, reproducible
 
     def __init__(self, config: Optional[Dict] = None):
         self.config = config or LLM_FILTER_CONFIG
-        # 从运行时配置获取研究方向
         self.research_description = get_research_description()
-
-        # 调试：查看配置中的所有键
         logger.info(f"LLMFilterService 接收到的配置键: {list(self.config.keys())}")
 
         self.backend = create_llm_backend(self.config, purpose="filter")
@@ -136,8 +152,50 @@ open-source implementation, reproducible
         self.model = self.config.get("model", "gpt-3.5-turbo")
         self.temperature = self.config.get("temperature", 0.1)
         self.max_tokens = self.config.get("max_tokens", 500)
+        config_scoring_anchors = self.config.get("scoring_anchors", "")
+        if isinstance(config_scoring_anchors, str) and config_scoring_anchors.strip():
+            self.scoring_anchors = config_scoring_anchors.strip()
+        else:
+            self.scoring_anchors = (
+                get_scoring_anchors() or self.DEFAULT_SCORING_ANCHORS.strip()
+            )
 
         logger.info("LLMFilterService初始化完成")
+
+    def generate_scoring_anchors(self, research_description: str) -> str:
+        prompt = f"""你是一位科研论文评审专家。
+请根据以下研究方向，生成一套论文相关度评分锚点。
+
+研究方向：{research_description}
+
+请生成以下格式的锚点（参考示例格式，但内容必须完全针对上述研究方向）：
+
+## 评分参考锚点
+
+### 高分信号（每项可得20-25分）
+**问题相关关键词**：...（列出10-15个与该研究方向直接相关的英文关键词）
+
+**方法相关关键词**：...（列出8-12个该研究方向常用的方法/技术关键词）
+
+**数据/资源关键词**：...（列出5-8个该方向常见的数据集类型或资源形式）
+
+### 中等分数信号（每项10-19分）
+- ...（列出3-5条相邻领域、通用方法或需适配后才有参考价值的方向）
+
+### 低分信号（每项0-9分）
+- ...（列出3-5条明确不相关、帮助很弱或偏题的方向）
+
+要求：
+1. 只输出锚点内容，不要解释。
+2. 保持 Markdown 标题和列表结构完整。
+3. 内容必须贴合给定研究方向，不能复用通用示例。"""
+
+        return self.backend.generate(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=800,
+        ).strip()
 
     def evaluate_paper(self, paper: Dict[str, Any]) -> Dict[str, Any]:
         """评估单篇论文的相关度"""
@@ -273,7 +331,7 @@ open-source implementation, reproducible
 **标题**：{paper.get("Title", "N/A")}
 **摘要**：{paper.get("Abstract", "N/A")}
 
-{self.SCORING_ANCHORS}
+{self.scoring_anchors}
 
 {self.FEW_SHOT_EXAMPLES}
 
