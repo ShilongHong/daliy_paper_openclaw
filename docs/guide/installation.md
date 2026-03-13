@@ -187,7 +187,7 @@ cd daliy_paper_openclaw
 
 ### Step 3: Create a virtual environment
 
-本项目需要 **Python 3.11**，推荐使用 [uv](https://github.com/astral-sh/uv) 管理虚拟环境（速度更快，且可自动下载指定 Python 版本）。
+本项目需要 **Python 3.12**，推荐使用 [uv](https://github.com/astral-sh/uv) 管理虚拟环境（速度更快，且可自动下载指定 Python 版本）。
 
 #### 3a. 安装 uv（如果尚未安装）
 
@@ -213,13 +213,13 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 uv --version
 ```
 
-#### 3b. 创建 Python 3.11 虚拟环境
+#### 3b. 创建 Python 3.12 虚拟环境
 
 ```bash
-uv venv .venv --python 3.11
+uv venv .venv --python 3.12
 ```
 
-> uv 会自动下载 Python 3.11（如果本机尚未安装），无需手动配置。
+> uv 会自动下载 Python 3.12（如果本机尚未安装），无需手动配置。
 
 #### 3c. 激活虚拟环境
 
