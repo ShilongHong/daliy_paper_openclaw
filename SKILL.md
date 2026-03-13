@@ -56,9 +56,9 @@ OpenClaw 使用本技能时，需要同时扮演两类角色：
 
 推荐默认值：
 
-- `paper2data-translation`
-- `paper2data-filter`
-- `paper2data-graduate-student`
+- `translation`
+- `filter`
+- `graduate-student`
 
 ### 3. “立即推送”通常只是启动后台任务
 
@@ -631,17 +631,17 @@ curl -X POST http://127.0.0.1:20001/api/actions/deliver-now
 如果 OpenClaw 被用作 LLM 后端，建议使用多 agent 拆分：
 
 ```text
-paper2data-translation        -> 标题/摘要翻译
-paper2data-filter             -> 相关性筛选打分
-paper2data-graduate-student   -> 深度简报补全
+translation        -> 标题/摘要翻译
+filter             -> 相关性筛选打分
+graduate-student   -> 深度简报补全
 ```
 
 推荐模型分工：
 
 ```text
-paper2data-translation        -> bailian/qwen3.5-plus
-paper2data-filter             -> bailian/MiniMax-M2.5
-paper2data-graduate-student   -> bailian/glm-5
+translation        -> bailian/qwen3.5-plus
+filter             -> bailian/MiniMax-M2.5
+graduate-student   -> bailian/glm-5
 ```
 
 ## 常见失败模式
@@ -664,7 +664,7 @@ paper2data-graduate-student   -> bailian/glm-5
 
 ### 4. OpenClaw agent 名称不匹配
 
-若配置写的是 `paper2data-filter`，但本地实际 agent 叫 `filter`，调用会失败。
+若配置写的是 `filter`，但本地实际 agent 叫 `filter`，调用会失败。
 
 ### 5. 研究方向是自然语言，但关键词是 arXiv 分类
 

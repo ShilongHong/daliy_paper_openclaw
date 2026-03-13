@@ -94,9 +94,9 @@ Follow these steps.
 
 如果选 `openclaw`，安装阶段只询问最小必要配置：
 - `binary_path` — openclaw 可执行文件路径（先自动探测；探测失败时再手动输入完整路径）
-- `translation_agent_id` — 翻译任务的 agent（默认：`paper2data-translation`）
-- `filter_agent_id` — 论文打分的 agent（默认：`paper2data-filter`）
-- `review_agent_id` — 深度分析的 agent（默认：`paper2data-graduate-student`，可留默认）
+- `translation_agent_id` — 翻译任务的 agent（默认：`translation`）
+- `filter_agent_id` — 论文打分的 agent（默认：`filter`）
+- `review_agent_id` — 深度分析的 agent（默认：`graduate-student`，可留默认）
 - `timeout_seconds` — LLM 响应超时时间（默认：`300`）
 
 安装阶段**不要强制询问**每个 agent 的模型，也不要一开始就展开高级 OpenClaw 路由配置。优先先让系统跑起来，再在后续高级配置里调整。
@@ -147,7 +147,7 @@ Follow these steps.
 
 - 不要在未确认的情况下把最近 session 直接当成最终投递目标。
 - 如果用户明确希望论文就发到当前正在使用的对话，可以把该 session 写入 `openclaw.session_key`。
-- 优先使用三个独立 agent：`paper2data-translation`、`paper2data-filter`、`paper2data-graduate-student`。
+- 优先使用三个独立 agent：`translation`、`filter`、`graduate-student`。
 - 如果用户没有提供完整的 LLM 配置，仍然以最小可运行配置完成安装。
 - 投递使用配置的 `openclaw.session_key`，运行时通过 `openclaw sessions --json` 解析实际 sessionId。
 
@@ -242,7 +242,15 @@ uv pip install -r requirements.txt
 
 ### Step 5: Write local configuration
 
-Create `config.local.json` based on the user's answers from Step 0.
+#### 5a. Generate `config.py` from the template
+
+```bash
+cp config.demo.py config.py
+```
+
+`config.demo.py` is the canonical template committed to the repository. Copying it produces the required `config.py` compatibility shim that bridges legacy `from config import ...` imports to the new `core/config_loader.py`. Do not edit `config.py` manually — all runtime values come from `config.local.json`.
+
+#### 5b. Create `config.local.json` based on the user's answers from Step 0.
 
 Minimal SQLite + OpenClaw delivery config:
 
@@ -264,9 +272,9 @@ Minimal SQLite + OpenClaw delivery config:
     "model": "<if openai_compatible>",
     "openclaw": {
       "binary_path": "openclaw",
-      "translation_agent_id": "paper2data-translation",
-      "filter_agent_id": "paper2data-filter",
-      "review_agent_id": "paper2data-graduate-student",
+      "translation_agent_id": "translation",
+      "filter_agent_id": "filter",
+      "review_agent_id": "graduate-student",
       "translation_model": "",
       "filter_model": "",
       "review_model": "",
@@ -349,9 +357,9 @@ curl -X PUT http://127.0.0.1:<new_port>/api/config/llm_filter \
       "max_workers": 16,
       "openclaw": {
         "binary_path": "openclaw",
-        "translation_agent_id": "paper2data-translation",
-        "filter_agent_id": "paper2data-filter",
-        "review_agent_id": "paper2data-graduate-student",
+        "translation_agent_id": "translation",
+        "filter_agent_id": "filter",
+        "review_agent_id": "graduate-student",
         "translation_model": "",
         "filter_model": "",
         "review_model": "",

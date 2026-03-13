@@ -83,7 +83,7 @@ cp config.local.example.json config.local.json
 python app.py
 ```
 
-注意：`cp config.local.example.json config.local.json` 只会复制示例配置，不会自动创建 OpenClaw agents；如果你要使用 `paper2data-translation`、`paper2data-filter`、`paper2data-graduate-student`，请运行 init wizard 或手动创建。
+注意：`cp config.local.example.json config.local.json` 只会复制示例配置，不会自动创建 OpenClaw agents；如果你要使用 `translation`、`filter`、`graduate-student`，请运行 init wizard 或手动创建。
 
 启动后验证：
 
@@ -107,7 +107,7 @@ openclaw sessions --json
 
 注意：论文投递不会自动取“当前会话”。后台服务会使用你配置的 `openclaw.session_key`，再在发送时解析成真实 `sessionId`。
 
-如果你把 OpenClaw 也用作 LLM 后端，建议优先使用分用途 agent，例如 `paper2data-translation`、`paper2data-filter`、`paper2data-graduate-student`；如果只想快速跑通，也可以先用单个 `paper2data-llm` 兼容模式，不要和接收论文的用户会话混用。
+如果你把 OpenClaw 也用作 LLM 后端，建议优先使用分用途 agent，例如 `translation`、`filter`、`graduate-student`；如果只想快速跑通，也可以先用单个 `main` 兼容模式，不要和接收论文的用户会话混用。
 
 ## Common Endpoints
 

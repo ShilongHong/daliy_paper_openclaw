@@ -15,9 +15,9 @@
     "model": "google/gemini-3.1-flash-lite-preview",
     "openclaw": {
       "binary_path": "openclaw",
-      "translation_agent_id": "paper2data-translation",
-      "filter_agent_id": "paper2data-filter",
-      "review_agent_id": "paper2data-graduate-student",
+      "translation_agent_id": "translation",
+      "filter_agent_id": "filter",
+      "review_agent_id": "graduate-student",
       "translation_model": "",
       "filter_model": "",
       "review_model": "",

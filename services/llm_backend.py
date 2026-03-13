@@ -74,14 +74,14 @@ class OpenClawBackend:
         }
         key = purpose_key_map.get(purpose, "agent_id")
         fallback_map = {
-            "translation": "paper2data-translation",
-            "filter": "paper2data-filter",
-            "review": "paper2data-graduate-student",
+            "translation": "translation",
+            "filter": "filter",
+            "review": "graduate-student",
         }
         return str(
             openclaw_map.get(
                 key,
-                openclaw_map.get("agent_id", fallback_map.get(purpose, "paper2data-llm")),
+                openclaw_map.get("agent_id", fallback_map.get(purpose, "main")),
             )
         )
 
