@@ -80,6 +80,28 @@ def _list_openclaw_agents(binary_path: str) -> set[str]:
         return set()
 
 
+def _get_main_agent_model(binary_path: str) -> str:
+    try:
+        result = subprocess.run(
+            [binary_path, "agents", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode != 0:
+            return ""
+        payload = json.loads(result.stdout or "[]")
+        if not isinstance(payload, list):
+            return ""
+        for item in payload:
+            if isinstance(item, dict) and item.get("id") == "main":
+                return str(item.get("model", ""))
+        return ""
+    except Exception:
+        return ""
+
+
 def _discover_openclaw_binary() -> str:
     candidates = [
         shutil.which("openclaw"),
@@ -251,7 +273,8 @@ def run_init_wizard() -> Path:
         )
     else:
         available_models = _discover_openclaw_models(binary_path)
-        default_model = available_models[0] if available_models else ""
+        main_model = _get_main_agent_model(binary_path)
+        default_model = main_model or (available_models[0] if available_models else "")
         translation_agent_id = (
             input("翻译 Agent ID（默认 daliy_paper-translation）: ").strip()
             or "daliy_paper-translation"

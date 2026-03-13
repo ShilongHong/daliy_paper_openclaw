@@ -1,4 +1,5 @@
 import json
+import logging
 import subprocess
 import threading
 import uuid
@@ -7,6 +8,8 @@ from typing import Any, cast
 
 import httpx
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 Message = dict[str, str]
@@ -120,7 +123,7 @@ class OpenClawBackend:
             for item in top_level_payloads:
                 if isinstance(item, dict):
                     text = item.get("text")
-                    if isinstance(text, str) and text:
+                    if isinstance(text, str) and text.strip():
                         return text
 
         result = payload.get("result", {})
@@ -130,7 +133,7 @@ class OpenClawBackend:
                 for item in output_payloads:
                     if isinstance(item, dict):
                         text = item.get("text")
-                        if isinstance(text, str) and text:
+                        if isinstance(text, str) and text.strip():
                             return text
 
         messages = payload.get("messages", [])
@@ -139,9 +142,11 @@ class OpenClawBackend:
                 if not isinstance(item, dict):
                     continue
                 content = item.get("content")
-                if isinstance(content, str) and content:
+                if isinstance(content, str) and content.strip():
                     return content
 
+        stdout_preview = stdout[:500] if len(stdout) > 500 else stdout
+        logger.warning("OpenClaw 返回内容中未提取到有效文本，原始输出: %s", stdout_preview)
         raise ValueError("OpenClaw 未返回可解析的文本内容")
 
     def generate(

@@ -342,10 +342,10 @@ openclaw agents add daliy_paper-translation --workspace /home/yourname/daliy_pap
 openclaw agents add daliy_paper-graduate-student --workspace /home/yourname/daliy_paper_openclaw --non-interactive
 ```
 
-如果需要为某个 agent 指定模型（可选），加 `--model` 参数：
+不指定 `--model` 时，agent 默认使用 main agent 的 Primary Model。如果需要为某个 agent 单独指定模型，加 `--model` 参数：
 
 ```bash
-openclaw agents add daliy_paper-filter --workspace <project_dir> --model bailian/MiniMax-M2.5 --non-interactive
+openclaw agents add daliy_paper-filter --workspace <project_dir> --model <model_id> --non-interactive
 ```
 
 #### 6c. 验证创建结果
