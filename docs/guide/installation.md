@@ -25,6 +25,22 @@ Follow these steps.
 
 **在开始安装之前，你必须按以下顺序向用户询问所有配置问题。**
 
+**提问策略补充（非常重要）：**
+
+- 这是给 LLM agent 的安装说明，不是给用户看的教学文档。
+- 对于常规配置，不要一上来展开长篇解释；先结合上下文给出一个**可运行的默认方案**，直接问用户 `这样可以吗？`
+- 只有当用户不同意、犹豫、或明确追问时，再解释某个配置项是做什么的。
+- 特别是 `database`、`openclaw.session_key`、`schedule` 这类配置，优先采用“默认方案 -> 用户确认 -> 必要时再展开”的流程。
+
+**Step 0 执行蓝图（推荐严格遵守）：**
+
+1. 先收集用户的 `research_description`
+2. 根据这段描述自动生成 `scoring_anchors` 和推荐的 `arxiv.keywords`
+3. 把“锚点 + 分类推荐”作为一版默认方案给用户确认
+4. 再对数据库、LLM 后端、投递目标、精读模式、定时任务依次给出默认建议，而不是逐项空问
+5. 只有用户拒绝默认方案时，才展开解释或追问细节
+6. 在 Step 0 结束时，把最终确认结果汇总成一份明确的配置草案，再进入实际安装步骤
+
 ---
 
 #### Q1. 研究方向描述
@@ -45,6 +61,27 @@ Follow these steps.
 排除方向：纯图表生成/可视化（不涉及提取）、纯NLP任务。
 ```
 
+在用户给出研究方向描述之后，**不要立刻进入 Q2**。先基于这段描述自动生成两样内容：
+
+1. `scoring_anchors` - 后续 LLM 评分时使用的评分锚点
+2. 推荐的 arXiv 分类/关键词 - 作为 `arxiv.keywords` 的建议初稿
+
+这里同样不要把过程问得太碎。LLM agent 应该先自己理解用户的研究方向，然后直接给出一版**生成结果 + 默认建议**，再让用户确认。
+
+然后把这两部分结果展示给用户确认：
+
+- 先展示生成的评分锚点
+- 再展示推荐的 arXiv 分类（例如 `cs.CV`、`cs.CL`、`stat.ML`）
+- 默认表达方式应当类似：`我先按你的研究方向生成了一版评分锚点，并推荐这些 arXiv 分类作为默认抓取范围。这样可以吗？`
+- 只有当用户不同意时，再进入“重新生成 / 手动修改分类 / 解释为什么推荐这些分类”的分支
+
+**只有在用户确认之后，才继续后面的问题。**
+
+建议交互：
+
+- `这版锚点和分类我先按默认方案这样配置，可以吗？` - 可以 / 不可以
+- 如果不可以，再细分为：重新生成锚点、手动修改分类、解释推荐理由
+
 ---
 
 #### Q2. ArXiv 关键词 / 分类
@@ -63,11 +100,23 @@ Follow these steps.
 
 默认值：`["cs.CL", "cs.CV", "cs.LG", "cs.AI", "cs.IR"]`
 
+如果在 Q1 之后已经自动生成了推荐分类，这里应当：
+
+- 以用户刚刚确认过的推荐分类作为默认值
+- 如果用户拒绝推荐分类，再回退到通用默认值
+- 不要忽略用户刚刚确认过的结果，重新从头追问一遍
+
 ---
 
 #### Q3. 数据库类型
 
 > **为什么重要**：SQLite 零配置、单文件，适合个人在一台机器上使用。MySQL 只在需要远程访问、多用户共享或已有 MySQL 实例的情况下才需要。
+
+对 LLM agent 的推荐交互方式：
+
+- 先直接给默认建议：`我建议先用 sqlite，数据库文件放在 data/paper2data.db，这样可以零配置启动。这样可以吗？`
+- 如果用户接受：直接记录 `database.engine = sqlite` 和 `database.sqlite_path = data/paper2data.db`
+- 如果用户拒绝或说自己有 MySQL：再继续追问 MySQL 连接信息，并简要解释差异
 
 选项：
 - `sqlite` — 推荐大多数用户使用。无需额外配置，数据存在本地文件中。
@@ -82,6 +131,12 @@ Follow these steps.
 #### Q4. LLM 后端
 
 > **为什么重要**：系统需要 LLM 来（1）给论文打相关度分数，（2）将标题和摘要翻译成中文，（3）可选地生成更深度的论文分析。你需要选择如何调用 LLM。
+
+对 LLM agent 的推荐交互方式：
+
+- 先给默认建议：`我建议先用 openai_compatible，这样配置最少、最容易跑通。这样可以吗？`
+- 如果用户接受：只追问最小必要字段 `api_key`、`base_url`、`model`
+- 如果用户明确希望走 OpenClaw agent：再进入 `openclaw` 分支，补充 agent 相关配置
 
 选项：
 - `openai_compatible` — 使用任意 OpenAI 兼容 API（SiliconFlow、DeepSeek、OpenAI 等）。配置简单，只需要一个 API key。
@@ -112,7 +167,7 @@ Follow these steps.
 安装阶段建议这样做：
 - 先运行 `openclaw sessions --json`
 - 如果能列出 session，就把**最近一个候选 session**展示给用户确认
-- 询问：`是否使用这个 session 作为默认接收会话？`
+- 询问：`我找到一个最近使用的 session，建议先用它作为默认接收会话。这样可以吗？`
 - 如果用户不同意，再让用户手动输入 `session_key`
 
 重要：不要无确认地直接假定“当前对话”就是最终投递目标。可以把候选 session 作为默认建议值，但必须让用户确认。
@@ -123,6 +178,12 @@ Follow these steps.
 
 > **为什么重要**：标准摘要包含标题、分数、推荐理由和摘要。研究生精读模式会额外生成更丰富的分析：机构提取、贡献点、结论点、实验要点和重要性总结。每篇论文消耗更多 LLM token，但能给出更有价值的每日推送。
 
+对 LLM agent 的推荐交互方式：
+
+- 先给默认建议：`我建议先关闭研究生精读模式，先把主流程跑通、控制 token 成本。这样可以吗？`
+- 如果用户接受：写入 `openclaw.enable_graduate_student_briefing = false`
+- 如果用户明确需要更详细的每日分析：再打开该选项并说明会增加 LLM 消耗
+
 选项：
 - `false`（默认）— 标准摘要，token 消耗较低
 - `true` — 深度精读分析，信息更丰富
@@ -132,6 +193,12 @@ Follow these steps.
 #### Q7. 定时任务配置
 
 > **为什么重要**：调度器控制系统何时自动从 arXiv 抓取新论文、何时将打分后的论文投递到你的 session。不配置调度的话，所有操作都需要手动通过 API 触发。
+
+对 LLM agent 的推荐交互方式：
+
+- 先直接给默认方案：`我建议先开启定时任务，抓取时间用 02:00，推送时间用 ["09:00"]。这样可以吗？`
+- 如果用户接受：直接写入默认调度配置
+- 如果用户不同意：再继续问要不要关闭调度，或改成哪些具体时间
 
 选项：
 - 现在启用 — 配置自动抓取和投递时间
@@ -150,6 +217,28 @@ Follow these steps.
 - 优先使用三个独立 agent：`daliy_paper-translation`、`daliy_paper-filter`、`daliy_paper-graduate-student`。
 - 如果用户没有提供完整的 LLM 配置，仍然以最小可运行配置完成安装。
 - 投递使用配置的 `openclaw.session_key`，运行时通过 `openclaw sessions --json` 解析实际 sessionId。
+
+### Step 0.5: 把用户回答映射成实际配置
+
+安装时问到的内容，最终要落到这些配置键上：
+
+- `Q1 研究方向描述` -> `research_description`
+- `Q1 自动生成的评分锚点` -> `llm_filter.scoring_anchors`
+- `Q2 推荐/确认后的 arXiv 分类` -> `arxiv.keywords`
+- `Q3 数据库选择` -> `database.engine` + `database.sqlite_path` 或 MySQL 连接字段
+- `Q4 LLM 后端选择` -> `llm_filter.backend` 及其子字段
+- `Q5 投递目标` -> `openclaw.session_key`
+- `Q6 精读模式` -> `openclaw.enable_graduate_student_briefing`
+- `Q7 定时任务` -> `schedule.enable_schedule`、`schedule.fetch_papers.*`、`schedule.push_papers.*`
+
+运行链路也要心里有数：
+
+- `arxiv.keywords` 用于抓取论文原始候选集
+- `research_description` + `llm_filter.scoring_anchors` 一起进入论文相关度评分 prompt
+- `openclaw.session_key` 决定论文最终投递到哪个 session
+- `schedule.*` 决定抓取和推送何时自动执行
+
+其中 `scoring_anchors` 的场景最容易被忽略：它不是给用户看的展示字段，而是给 LLM 打分时用的“评分参考”。系统会把它和 `research_description` 一起拼进评分 prompt，帮助模型稳定地区分高相关 / 中相关 / 低相关论文。
 
 ### Step 1: 安装 OpenClaw CLI
 
@@ -267,6 +356,7 @@ Minimal SQLite + OpenClaw delivery config:
   "llm_filter": {
     "enable": true,
     "backend": "<backend from Q4>",
+    "scoring_anchors": "<anchors confirmed from Q1>",
     "api_key": "<if openai_compatible>",
     "base_url": "<if openai_compatible>",
     "model": "<if openai_compatible>",
@@ -303,6 +393,14 @@ Minimal SQLite + OpenClaw delivery config:
 ```
 
 Adapt the template above based on the user's actual answers. Remove unused fields (e.g. if using `openai_compatible`, the `openclaw` block inside `llm_filter` can use defaults).
+
+补充理解：
+
+- `research_description` 描述“你在研究什么”
+- `arxiv.keywords` 决定“先从 arXiv 抓哪些论文进来”
+- `llm_filter.scoring_anchors` 决定“LLM 用什么标准给这些论文打相关度分数”
+
+三者分工不同，不要混成一个字段。
 
 **配置优先级说明**：首次启动时，`config.local.json` 的内容会被自动迁移到数据库 `system_config` 表。此后数据库成为唯一配置源，再修改 `config.local.json` **不会生效**。如果需要变更已运行系统的配置，必须通过以下方式之一：
 
