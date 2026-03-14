@@ -40,6 +40,7 @@ def get_failed_papers() -> List[Dict[str, Any]]:
                 WHERE RelevanceReason LIKE '%评估失败%' 
                    OR RelevanceReason LIKE '%默认评分%'
                    OR RelevanceReason LIKE '%解析失败%'
+                   OR PotentialHelp LIKE '%解析异常%'
                 ORDER BY created_at DESC
             """
             cursor.execute(sql)
