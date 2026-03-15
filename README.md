@@ -126,7 +126,6 @@ curl -X POST http://127.0.0.1:20001/api/actions/deliver-now
 ```text
 daliy_paper_openclaw/
 ├── app.py
-├── config.py
 ├── config.local.example.json
 ├── docs/guide/installation.md
 ├── core/

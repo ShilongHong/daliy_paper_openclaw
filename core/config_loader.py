@@ -41,3 +41,29 @@ def load_settings(
         _ = deep_merge(settings, runtime_config)
 
     return settings
+
+
+def get_settings_section(
+    name: str,
+    default: JsonDict | None = None,
+    *,
+    local_config_path: str = "config.local.json",
+) -> JsonDict:
+    settings = load_settings(local_config_path=local_config_path)
+    value = settings.get(name)
+    if isinstance(value, dict):
+        return cast(JsonDict, deepcopy(value))
+    return cast(JsonDict, deepcopy(default or {}))
+
+
+def get_string_setting(
+    name: str,
+    default: str = "",
+    *,
+    local_config_path: str = "config.local.json",
+) -> str:
+    settings = load_settings(local_config_path=local_config_path)
+    value = settings.get(name, default)
+    if isinstance(value, str):
+        return value
+    return default

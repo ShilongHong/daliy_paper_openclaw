@@ -3,7 +3,7 @@ import logging
 import os
 from typing import cast
 
-from config import ARXIV_CONFIG, LLM_FILTER_CONFIG, OPENCLAW_CONFIG, SCHEDULE_CONFIG
+from core.config_loader import load_settings
 from services import get_all_configs_from_db, save_config_to_db
 
 
@@ -79,11 +79,12 @@ def save_runtime_config(
 
 def get_config(name: str, logger: logging.Logger | None = None) -> ConfigMap:
     runtime = load_runtime_config(logger=logger)
+    settings = load_settings()
     config_map: dict[str, ConfigMap] = {
-        "arxiv": cast(ConfigMap, ARXIV_CONFIG),
-        "llm_filter": cast(ConfigMap, LLM_FILTER_CONFIG),
-        "schedule": cast(ConfigMap, SCHEDULE_CONFIG),
-        "openclaw": cast(ConfigMap, OPENCLAW_CONFIG),
+        "arxiv": cast(ConfigMap, settings.get("arxiv", {})),
+        "llm_filter": cast(ConfigMap, settings.get("llm_filter", {})),
+        "schedule": cast(ConfigMap, settings.get("schedule", {})),
+        "openclaw": cast(ConfigMap, settings.get("openclaw", {})),
     }
 
     base_config = dict(config_map.get(name, {}))

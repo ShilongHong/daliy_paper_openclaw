@@ -4,7 +4,7 @@ LLM论文筛选服务
 
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 从父目录导入配置
@@ -12,10 +12,15 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import LLM_FILTER_CONFIG, RESEARCH_DESCRIPTION
+from core.config_loader import get_settings_section, get_string_setting
 from services.llm_backend import create_llm_backend
 
 logger = logging.getLogger(__name__)
+
+LLM_FILTER_CONFIG = cast(Dict[str, Any], get_settings_section("llm_filter"))
+DEFAULT_RESEARCH_DESCRIPTION = get_string_setting(
+    "research_description", "请在这里填写你的研究方向描述"
+)
 
 
 def get_research_description() -> str:
@@ -28,7 +33,7 @@ def get_research_description() -> str:
             return str(configs["research_description"])
     except Exception as e:
         logger.warning(f"从数据库获取研究方向失败: {e}")
-    return RESEARCH_DESCRIPTION
+    return DEFAULT_RESEARCH_DESCRIPTION
 
 
 def get_scoring_anchors() -> str:
@@ -143,15 +148,15 @@ open-source implementation, reproducible
 """
 
     def __init__(self, config: Optional[Dict] = None):
-        self.config = config or LLM_FILTER_CONFIG
+        self.config = cast(Dict[str, Any], config or LLM_FILTER_CONFIG)
         self.research_description = get_research_description()
         logger.info(f"LLMFilterService 接收到的配置键: {list(self.config.keys())}")
 
         self.backend = create_llm_backend(self.config, purpose="filter")
 
-        self.model = self.config.get("model", "gpt-3.5-turbo")
-        self.temperature = self.config.get("temperature", 0.1)
-        self.max_tokens = self.config.get("max_tokens", 500)
+        self.model = str(self.config.get("model", "gpt-3.5-turbo"))
+        self.temperature = float(self.config.get("temperature", 0.1))
+        self.max_tokens = int(self.config.get("max_tokens", 500))
         config_scoring_anchors = self.config.get("scoring_anchors", "")
         if isinstance(config_scoring_anchors, str) and config_scoring_anchors.strip():
             self.scoring_anchors = config_scoring_anchors.strip()
@@ -266,7 +271,7 @@ open-source implementation, reproducible
         if not papers:
             return [], []
 
-        max_workers = self.config.get("max_workers", 16)
+        max_workers = int(self.config.get("max_workers", 16))
         logger.info(f"开始LLM筛选，共 {len(papers)} 篇论文，使用 {max_workers} 个线程")
 
         min_stars = self.config.get("min_stars", 3)

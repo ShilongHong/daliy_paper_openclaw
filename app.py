@@ -23,15 +23,18 @@ import uvicorn
 # 确保服务模块可以导入
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import (
-    LOGGING_CONFIG,
-    RESEARCH_DESCRIPTION,
-)
+from core.config_loader import get_settings_section, get_string_setting
 from core.runtime_config import get_config, load_runtime_config, save_runtime_config
 from core.scheduler import PaperScheduler
 from services.paper_queue_service import PaperQueueService
 from services import storage_service
 from services.translation_service import TranslationService
+
+
+LOGGING_CONFIG = cast(dict[str, object], get_settings_section("logging"))
+DEFAULT_RESEARCH_DESCRIPTION = get_string_setting(
+    "research_description", "请在这里填写你的研究方向描述"
+)
 
 
 # ============================================================
@@ -358,10 +361,8 @@ async def delete_paper_endpoint(doi: str):
 async def retranslate_paper_endpoint(doi: str):
     """重新翻译论文"""
     try:
-        from config import ARXIV_CONFIG
-
-        mysql_config = cast(ConfigMap, ARXIV_CONFIG.get("mysql", {}))
-        table = str(mysql_config.get("table_relevant", "papers_relevant"))
+        database_config = cast(ConfigMap, get_settings_section("database"))
+        table = str(database_config.get("table_relevant", "papers_relevant"))
 
         # 获取论文信息
         sql = f"SELECT * FROM `{table}` WHERE DOI = %s"
@@ -420,7 +421,7 @@ async def get_all_config():
     """获取所有配置"""
     # 从数据库加载研究方向（如果有）
     runtime = load_runtime_config(logger=logger)
-    research_value = runtime.get("research_description", RESEARCH_DESCRIPTION)
+    research_value = runtime.get("research_description", DEFAULT_RESEARCH_DESCRIPTION)
     research_description = str(research_value)
     openclaw_config = get_config("openclaw", logger=logger)
 

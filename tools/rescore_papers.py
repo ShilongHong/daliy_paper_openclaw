@@ -13,9 +13,12 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from config import LLM_FILTER_CONFIG, ARXIV_CONFIG
+from core.config_loader import get_settings_section
 from services.llm_filter_service import LLMFilterService
 from services.storage_service import get_mysql_connection, execute_query, execute_update
+
+
+DATABASE_CONFIG = get_settings_section("database")
 
 # 配置日志
 logging.basicConfig(
@@ -38,7 +41,7 @@ def get_papers_to_rescore(
     max_old_stars: int | None = None,
 ) -> list:
     """获取需要重新评分的论文"""
-    table = ARXIV_CONFIG["mysql"]["table_relevant"]
+    table = DATABASE_CONFIG.get("table_relevant", "papers_relevant")
 
     sql = (
         f"SELECT DOI, Title, Abstract, Stars, RelevanceReason FROM `{table}` WHERE 1=1"
@@ -67,7 +70,7 @@ def update_paper_score(
     doi: str, new_score: int, new_reason: str, new_help: str
 ) -> bool:
     """更新论文评分"""
-    table = ARXIV_CONFIG["mysql"]["table_relevant"]
+    table = DATABASE_CONFIG.get("table_relevant", "papers_relevant")
 
     sql = f"""
     UPDATE `{table}` 

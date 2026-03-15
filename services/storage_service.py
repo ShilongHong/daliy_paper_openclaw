@@ -1,8 +1,7 @@
 from collections.abc import Sequence
 from typing import cast
 
-from config import ARXIV_CONFIG
-from core.config_loader import load_settings
+from core.config_loader import get_settings_section, load_settings
 from storage.base import PaperQueryResult, PaperRecord, PaperStore
 from storage.factory import create_store
 from services import mysql_service as mysql_backend
@@ -12,7 +11,7 @@ SqlParams = Sequence[object] | None
 
 
 def _get_database_engine() -> str:
-    database_config = cast(dict[str, object], ARXIV_CONFIG.get("database", {}))
+    database_config = cast(dict[str, object], get_settings_section("database"))
     return str(database_config.get("engine", "sqlite"))
 
 

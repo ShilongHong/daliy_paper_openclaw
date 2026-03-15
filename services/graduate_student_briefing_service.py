@@ -7,11 +7,13 @@ import re
 
 import requests
 
-from config import LLM_FILTER_CONFIG
+from core.config_loader import get_settings_section
 from services.llm_backend import create_llm_backend
 
 
 logger = logging.getLogger(__name__)
+
+LLM_FILTER_CONFIG = get_settings_section("llm_filter")
 
 
 class GraduateStudentBriefingService:

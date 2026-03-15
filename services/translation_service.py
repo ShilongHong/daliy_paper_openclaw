@@ -11,10 +11,12 @@ from typing import Dict, Any, List, Optional
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import LLM_FILTER_CONFIG
+from core.config_loader import get_settings_section
 from services.llm_backend import create_llm_backend
 
 logger = logging.getLogger(__name__)
+
+LLM_FILTER_CONFIG = get_settings_section("llm_filter")
 
 
 class TranslationService:
@@ -24,7 +26,7 @@ class TranslationService:
         self.config = config or LLM_FILTER_CONFIG
         self.backend = create_llm_backend(self.config, purpose="translation")
         
-        self.model = self.config.get('model', 'gpt-3.5-turbo')
+        self.model = str(self.config.get('model', 'gpt-3.5-turbo'))
         self.temperature = 0.3
         self.max_tokens = 4096
         

@@ -5,19 +5,23 @@ MySQL数据库服务
 
 import logging
 import threading
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 from datetime import datetime, date
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import ARXIV_CONFIG
+from core.config_loader import get_settings_section
 
 # 配置日志
 logger = logging.getLogger(__name__)
 
 # 线程本地存储（每个线程独立的连接）
 _thread_local = threading.local()
+
+
+def _get_database_config() -> Dict[str, Any]:
+    return cast(Dict[str, Any], get_settings_section("database"))
 
 
 def _normalize_publication_year(publication_year: Any) -> str:
@@ -42,8 +46,8 @@ def _normalize_publication_year(publication_year: Any) -> str:
 
 def get_mysql_connection():
     """获取当前线程的MySQL连接（线程安全）"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
-    if not mysql_config.get("enable", False):
+    mysql_config = _get_database_config()
+    if mysql_config.get("engine", "sqlite") != "mysql":
         return None
 
     # 检查当前线程是否已有连接
@@ -84,14 +88,14 @@ def get_mysql_connection():
 
 def close_mysql_connection():
     """关闭MySQL连接"""
-    global _mysql_connection
-    if _mysql_connection is not None:
+    connection = cast(Any, getattr(_thread_local, "connection", None))
+    if connection is not None:
         try:
-            _mysql_connection.close()
+            connection.close()
             logger.info("MySQL连接已关闭")
         except:
             pass
-        _mysql_connection = None
+        _thread_local.connection = None
 
 
 def _ensure_tables_exist(conn, mysql_config: Dict):
@@ -250,7 +254,7 @@ def save_raw_papers_to_mysql(papers: List[Dict[str, Any]]) -> int:
     if not conn or not papers:
         return 0
 
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table_raw = mysql_config.get("table_raw", "papers_raw")
 
     insert_sql = f"""
@@ -299,7 +303,7 @@ def save_relevant_papers_to_mysql(papers: List[Dict[str, Any]]) -> int:
     if not conn or not papers:
         return 0
 
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table_relevant = mysql_config.get("table_relevant", "papers_relevant")
 
     insert_sql = f"""
@@ -349,7 +353,7 @@ def save_relevant_papers_to_mysql(papers: List[Dict[str, Any]]) -> int:
     return saved_count
 
 
-def execute_query(sql: str, params: tuple = None) -> List[Dict]:
+def execute_query(sql: str, params: tuple[object, ...] | None = None) -> List[Dict]:
     """执行查询SQL"""
     conn = get_mysql_connection()
     if not conn:
@@ -357,14 +361,17 @@ def execute_query(sql: str, params: tuple = None) -> List[Dict]:
 
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, params)
-            return cursor.fetchall()
+            if params is None:
+                cursor.execute(sql)
+            else:
+                cursor.execute(sql, params)
+            return list(cursor.fetchall())
     except Exception as e:
         logger.warning(f"⚠️ 查询执行失败: {str(e)}")
         return []
 
 
-def execute_update(sql: str, params: tuple = None) -> int:
+def execute_update(sql: str, params: tuple[object, ...] | None = None) -> int:
     """执行更新SQL"""
     conn = get_mysql_connection()
     if not conn:
@@ -372,7 +379,10 @@ def execute_update(sql: str, params: tuple = None) -> int:
 
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, params)
+            if params is None:
+                cursor.execute(sql)
+            else:
+                cursor.execute(sql, params)
         conn.commit()
         return cursor.rowcount
     except Exception as e:
@@ -407,7 +417,7 @@ def get_all_relevant_papers(
     Returns:
         {'papers': List[Dict], 'total': int}
     """
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
 
     # 构建WHERE条件
@@ -468,7 +478,7 @@ def get_all_relevant_papers(
 
 def get_relevant_papers_by_date(date: str) -> List[Dict]:
     """获取指定日期的相关论文"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
     sql = f"SELECT * FROM `{table}` WHERE DATE(created_at) = %s ORDER BY Stars DESC"
     return execute_query(sql, (date,))
@@ -476,7 +486,7 @@ def get_relevant_papers_by_date(date: str) -> List[Dict]:
 
 def get_paper_stats() -> Dict:
     """获取论文统计信息"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table_raw = mysql_config.get("table_raw", "papers_raw")
     table_relevant = mysql_config.get("table_relevant", "papers_relevant")
 
@@ -535,7 +545,7 @@ def get_paper_stats() -> Dict:
 
 def is_mysql_enabled() -> bool:
     """检查MySQL是否启用"""
-    return ARXIV_CONFIG.get("mysql", {}).get("enable", False)
+    return _get_database_config().get("engine", "sqlite") == "mysql"
 
 
 def is_paper_processed(doi: str, table: str = "papers_relevant") -> bool:
@@ -573,7 +583,7 @@ def get_processed_dois(table: str = "papers_relevant") -> set:
 
 def update_paper_mark(doi: str, is_marked: bool) -> bool:
     """更新论文标记状态"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
 
     sql = f"UPDATE `{table}` SET is_marked = %s WHERE DOI = %s"
@@ -583,7 +593,7 @@ def update_paper_mark(doi: str, is_marked: bool) -> bool:
 
 def update_paper_comment(doi: str, comment: str) -> bool:
     """更新论文评论"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
 
     sql = f"UPDATE `{table}` SET comment = %s WHERE DOI = %s"
@@ -593,7 +603,7 @@ def update_paper_comment(doi: str, comment: str) -> bool:
 
 def delete_paper(doi: str) -> bool:
     """删除论文"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
 
     sql = f"DELETE FROM `{table}` WHERE DOI = %s"
@@ -603,7 +613,7 @@ def delete_paper(doi: str) -> bool:
 
 def get_unprocessed_raw_papers(limit: int = 100) -> List[Dict]:
     """获取未处理的原始论文"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_raw", "papers_raw")
 
     sql = f"SELECT * FROM `{table}` WHERE processed = FALSE ORDER BY created_at DESC LIMIT %s"
@@ -615,7 +625,7 @@ def mark_papers_as_processed(dois: List[str]) -> int:
     if not dois:
         return 0
 
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_raw", "papers_raw")
 
     conn = get_mysql_connection()
@@ -912,7 +922,7 @@ def get_queue_preview_from_db(max_count: int = 10) -> List[Dict[str, Any]]:
             LIMIT %s
             """
             cursor.execute(sql, (max_count,))
-            return cursor.fetchall()
+            return list(cursor.fetchall())
     except Exception as e:
         logger.error(f"获取队列预览失败: {str(e)}")
         return []
@@ -937,7 +947,7 @@ def clear_queue_in_db() -> bool:
 
 def get_unpushed_papers(limit: int = 100) -> List[Dict[str, Any]]:
     """获取未推送的相关论文"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
 
     conn = get_mysql_connection()
@@ -955,7 +965,7 @@ def get_unpushed_papers(limit: int = 100) -> List[Dict[str, Any]]:
             cursor.execute(sql, (limit,))
             papers = cursor.fetchall()
             logger.info(f"找到 {len(papers)} 篇未推送的论文")
-            return papers
+            return cast(List[Dict[str, Any]], list(papers))
     except Exception as e:
         logger.error(f"获取未推送论文失败: {str(e)}")
         return []
@@ -966,7 +976,7 @@ def mark_papers_as_pushed(dois: List[str]) -> int:
     if not dois:
         return 0
 
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
+    mysql_config = _get_database_config()
     table = mysql_config.get("table_relevant", "papers_relevant")
 
     conn = get_mysql_connection()

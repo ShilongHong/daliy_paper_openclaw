@@ -9,8 +9,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 from services.storage_service import get_mysql_connection, execute_update
-from config import ARXIV_CONFIG
+from core.config_loader import get_settings_section
 import logging
+
+
+DATABASE_CONFIG = get_settings_section("database")
 
 # 配置日志
 logging.basicConfig(
@@ -21,9 +24,8 @@ logger = logging.getLogger(__name__)
 
 def reset_papers_to_unprocessed(years=[2025, 2026]):
     """将指定年份创建的论文设置为未处理"""
-    mysql_config = ARXIV_CONFIG.get("mysql", {})
-    table_raw = mysql_config.get("table_raw", "papers_raw")
-    table_relevant = mysql_config.get("table_relevant", "papers_relevant")
+    table_raw = DATABASE_CONFIG.get("table_raw", "papers_raw")
+    table_relevant = DATABASE_CONFIG.get("table_relevant", "papers_relevant")
 
     year_filter = " OR ".join([f"YEAR(created_at) = {year}" for year in years])
     years_str = ", ".join(map(str, years))

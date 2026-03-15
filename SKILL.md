@@ -716,7 +716,8 @@ daliy_paper-graduate-student   -> bailian/glm-5
 README.md
 docs/guide/installation.md
 app.py
-config.py
+config.local.example.json
+core/config_loader.py
 core/runtime_config.py
 services/llm_backend.py
 services/llm_filter_service.py

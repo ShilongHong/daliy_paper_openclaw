@@ -8,7 +8,7 @@ import time
 import csv
 import os
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 from urllib.parse import quote
 from datetime import datetime, timedelta
 import pytz
@@ -17,7 +17,7 @@ import pytz
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import ARXIV_CONFIG, OUTPUT_CONFIG, SCHEDULE_CONFIG
+from core.config_loader import get_settings_section
 
 # 尝试导入MySQL服务
 try:
@@ -29,23 +29,38 @@ try:
 
     MYSQL_AVAILABLE = True
 except ImportError:
+    def is_paper_processed(doi: str, table: str = "papers_raw") -> bool:
+        return False
+
+    def is_mysql_enabled() -> bool:
+        return False
+
+    def save_raw_papers_to_mysql(papers: List[Dict[str, Any]]) -> int:
+        return 0
+
     MYSQL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+ARXIV_CONFIG = cast(Dict[str, Any], get_settings_section("arxiv"))
+OUTPUT_CONFIG = cast(Dict[str, Any], get_settings_section("output"))
 
 
 class ArxivService:
     """arXiv论文获取服务类"""
 
     def __init__(self, config: Optional[Dict] = None):
-        self.config = config or ARXIV_CONFIG
-        self.api_url = self.config["api_url"]
-        self.batch_size = self.config["batch_size"]
-        self.request_delay = self.config["request_delay"]
-        self.max_results_per_keyword = self.config["max_results_per_keyword"]
+        self.config = cast(Dict[str, Any], config or ARXIV_CONFIG)
+        self.api_url = str(self.config.get("api_url", "http://export.arxiv.org/api/query"))
+        self.batch_size = int(self.config.get("batch_size", 50))
+        self.request_delay = float(self.config.get("request_delay", 30))
+        max_results = self.config.get("max_results_per_keyword")
+        self.max_results_per_keyword = (
+            int(max_results) if isinstance(max_results, int) else None
+        )
 
-        self.consecutive_duplicate_threshold = self.config.get(
-            "consecutive_duplicate_threshold", 10
+        self.consecutive_duplicate_threshold = int(
+            self.config.get("consecutive_duplicate_threshold", 10)
         )
 
         self.enable_duplicate_check = MYSQL_AVAILABLE and is_mysql_enabled()
@@ -56,7 +71,7 @@ class ArxivService:
         now_eastern = datetime.now(eastern)
 
         # 根据配置的 recent_days 动态生成日期范围
-        self.recent_days = self.config.get("recent_days", 3)
+        self.recent_days = int(self.config.get("recent_days", 3))
         self.target_dates = []
         for i in range(self.recent_days):
             date = (now_eastern - timedelta(days=i)).strftime("%Y-%m-%d")
@@ -80,7 +95,8 @@ class ArxivService:
             keywords: 关键词列表
             batch_callback: 每获取一批论文后的回调函数 callback(papers_batch)
         """
-        keywords = keywords or self.config["keywords"]
+        raw_keywords = keywords or self.config.get("keywords", [])
+        keywords = [str(keyword) for keyword in raw_keywords]
         all_papers = []
         seen_ids = set()
 
@@ -179,7 +195,7 @@ class ArxivService:
                 return all_papers
 
             if total_results is None:
-                total_results = int(feed.feed.get("opensearch_totalresults", 0))
+                total_results = int(cast(dict[str, Any], feed.feed).get("opensearch_totalresults", 0))
                 logger.info(f"  关键词 '{keyword}' 共有 {total_results} 篇相关论文")
 
             if not feed.entries:
@@ -218,9 +234,10 @@ class ArxivService:
                     found_older = True
                     break
 
-            start += len(feed.entries)
+            entry_count = len(feed.entries)
+            start += entry_count
             logger.info(
-                f"  第 {start // batch} 批：找到 {batch_papers} 篇新论文，累计 {len(all_papers)} 篇"
+                f"  第 {start // max(batch, 1)} 批：找到 {batch_papers} 篇新论文，累计 {len(all_papers)} 篇"
             )
 
             # 立即保存这批新论文到raw数据库
@@ -241,7 +258,7 @@ class ArxivService:
 
             if max_results and len(all_papers) >= max_results:
                 break
-            if start >= total_results:
+            if total_results is not None and start >= total_results:
                 break
 
         return all_papers
@@ -289,11 +306,11 @@ class ArxivService:
 
         if not filename:
             date_str = datetime.now().strftime("%Y%m%d")
-            filename = OUTPUT_CONFIG["filename_format"].format(date=date_str)
+            filename = str(OUTPUT_CONFIG.get("filename_format", "arxiv_papers_{date}.csv")).format(date=date_str)
             if prefix:
                 filename = f"{prefix}{filename}"
 
-        output_dir = OUTPUT_CONFIG["output_dir"]
+        output_dir = str(OUTPUT_CONFIG.get("output_dir", "output"))
         os.makedirs(output_dir, exist_ok=True)
         filepath = os.path.join(output_dir, filename)
 

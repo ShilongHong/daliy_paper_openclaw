@@ -5,7 +5,7 @@
 Paste this into your llm agent session:
 
 ```text
-Install and configure daliy_paper_openclaw by following the instructions here:
+根据这个文档安装 daliy_paper_openclaw，并询问用户协助进行相关配置:
 https://raw.githubusercontent.com/ShilongHong/daliy_paper_openclaw/main/docs/guide/installation.md
 ```
 
@@ -331,15 +331,7 @@ uv pip install -r requirements.txt
 
 ### Step 5: Write local configuration
 
-#### 5a. Generate `config.py` from the template
-
-```bash
-cp config.demo.py config.py
-```
-
-`config.demo.py` is the canonical template committed to the repository. Copying it produces the required `config.py` compatibility shim that bridges legacy `from config import ...` imports to the new `core/config_loader.py`. Do not edit `config.py` manually — all runtime values come from `config.local.json`.
-
-#### 5b. Create `config.local.json` based on the user's answers from Step 0.
+Create `config.local.json` based on the user's answers from Step 0.
 
 Minimal SQLite + OpenClaw delivery config:
 
