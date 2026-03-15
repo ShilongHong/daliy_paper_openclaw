@@ -51,6 +51,9 @@ DEFAULT_SETTINGS = {
     "openclaw": {
         "enabled": True,
         "delivery_mode": "cli-session",
+        "delivery_channel": "",
+        "delivery_target": "",
+        "delivery_account_id": "",
         "binary_path": "openclaw",
         "session_key": "main",
         "timeout_seconds": 300,

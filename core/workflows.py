@@ -177,7 +177,19 @@ def run_delivery(logger: logging.Logger | None = None) -> WorkflowResult:
                 delivery_config.get("binary_path", "openclaw"), "openclaw"
             ),
             session_key=_to_str(delivery_config.get("session_key", "main"), "main"),
-        timeout_seconds=_to_int(delivery_config.get("timeout_seconds", 300), 300),
+            timeout_seconds=_to_int(delivery_config.get("timeout_seconds", 300), 300),
+            enable_graduate_student_briefing=bool(
+                delivery_config.get("enable_graduate_student_briefing", False)
+            ),
+            delivery_channel=_to_str(
+                delivery_config.get("delivery_channel", ""), ""
+            ),
+            delivery_target=_to_str(
+                delivery_config.get("delivery_target", ""), ""
+            ),
+            delivery_account_id=_to_str(
+                delivery_config.get("delivery_account_id", ""), ""
+            ),
         )
         success = notifier.send_papers(papers)
 

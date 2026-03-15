@@ -104,10 +104,11 @@ openclaw sessions --json
 - `research_description`：你的研究方向描述
 - `arxiv.keywords`：抓取的分类或关键词
 - `llm_filter`：筛选/翻译用的模型后端配置
-- `openclaw.session_key`：论文最终投递到哪个 OpenClaw session
+- `openclaw.delivery_channel` / `openclaw.delivery_target`：论文最终直发到哪个聊天目标
+- `openclaw.session_key`：兼容模式下，论文投递到哪个 OpenClaw session
 - `schedule`：定时抓取和定时推送时间
 
-注意：论文投递不会自动取“当前会话”。后台服务会使用你配置的 `openclaw.session_key`，再在发送时解析成真实 `sessionId`。
+注意：论文投递不会自动取“当前会话”。如果配置了 `openclaw.delivery_channel` + `openclaw.delivery_target`，后台会直接调用 `openclaw message send`；否则才会回退到 `openclaw.session_key` 并解析真实 `sessionId`。
 
 如果你把 OpenClaw 也用作 LLM 后端，建议优先使用分用途 agent，例如 `daliy_paper-translation`、`daliy_paper-filter`、`daliy_paper-graduate-student`；如果只想快速跑通，也可以先用单个 `main` 兼容模式，不要和接收论文的用户会话混用。
 

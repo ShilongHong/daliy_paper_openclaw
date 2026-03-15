@@ -435,6 +435,11 @@ async def get_all_config():
             "openclaw": {
                 "enabled": openclaw_config.get("enabled", True),
                 "delivery_mode": openclaw_config.get("delivery_mode", "cli-session"),
+                "delivery_channel": openclaw_config.get("delivery_channel", ""),
+                "delivery_target": openclaw_config.get("delivery_target", ""),
+                "delivery_account_id": openclaw_config.get(
+                    "delivery_account_id", ""
+                ),
                 "session_key": openclaw_config.get("session_key", "main"),
                 "binary_path": openclaw_config.get("binary_path", "openclaw"),
                 "timeout_seconds": openclaw_config.get("timeout_seconds", 300),

@@ -14,6 +14,9 @@ class OpenClawNotifier:
     session_key: Final[str]
     timeout_seconds: Final[int]
     enable_graduate_student_briefing: Final[bool]
+    delivery_channel: Final[str]
+    delivery_target: Final[str]
+    delivery_account_id: Final[str]
 
     def __init__(
         self,
@@ -21,12 +24,18 @@ class OpenClawNotifier:
         session_key: str,
         timeout_seconds: int,
         enable_graduate_student_briefing: bool = False,
+        delivery_channel: str = "",
+        delivery_target: str = "",
+        delivery_account_id: str = "",
         runner=subprocess.run,
     ):
         self.binary_path = binary_path
         self.session_key = session_key
         self.timeout_seconds = timeout_seconds
         self.enable_graduate_student_briefing = enable_graduate_student_briefing
+        self.delivery_channel = delivery_channel.strip()
+        self.delivery_target = delivery_target.strip()
+        self.delivery_account_id = delivery_account_id.strip()
         self.runner = runner
         self.briefing_service = GraduateStudentBriefingService() if enable_graduate_student_briefing else None
 
@@ -48,21 +57,37 @@ class OpenClawNotifier:
             return None
         return channel, target
 
+    def has_explicit_delivery_target(self) -> bool:
+        return bool(self.delivery_channel and self.delivery_target)
+
+    def build_message_send_command(self, content: str, channel: str, target: str) -> list[str]:
+        command = [
+            self.binary_path,
+            "message",
+            "send",
+            "--channel",
+            channel,
+            "--target",
+            target,
+            "--message",
+            content,
+        ]
+        if self.delivery_account_id:
+            command.extend(["--account", self.delivery_account_id])
+        return command
+
     def build_send_command(self, content: str, session_id: str) -> list[str]:
+        if self.has_explicit_delivery_target():
+            return self.build_message_send_command(
+                content,
+                self.delivery_channel,
+                self.delivery_target,
+            )
+
         parsed = self._parse_message_target()
         if parsed:
             channel, target = parsed
-            return [
-                self.binary_path,
-                "message",
-                "send",
-                "--channel",
-                channel,
-                "--target",
-                target,
-                "--message",
-                content,
-            ]
+            return self.build_message_send_command(content, channel, target)
         return [
             self.binary_path,
             "agent",
@@ -268,9 +293,11 @@ class OpenClawNotifier:
         return [fallback]
 
     def send_papers(self, papers: list[dict[str, object]]) -> bool:
-        session_id = self.resolve_session_id()
-        if not session_id:
-            return False
+        session_id = ""
+        if not self.has_explicit_delivery_target():
+            session_id = self.resolve_session_id() or ""
+            if not session_id and self._parse_message_target() is None:
+                return False
 
         success_count = 0
         total = len(papers)

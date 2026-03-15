@@ -27,6 +27,9 @@
     }
   },
   "openclaw": {
+    "delivery_channel": "",
+    "delivery_target": "",
+    "delivery_account_id": "",
     "session_key": "main",
     "binary_path": "openclaw",
     "timeout_seconds": 300,

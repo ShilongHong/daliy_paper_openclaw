@@ -365,6 +365,9 @@ Minimal SQLite + OpenClaw delivery config:
     }
   },
   "openclaw": {
+    "delivery_channel": "",
+    "delivery_target": "",
+    "delivery_account_id": "",
     "session_key": "<session_key from Q5>",
     "binary_path": "openclaw",
     "timeout_seconds": 300,
