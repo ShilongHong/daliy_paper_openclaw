@@ -4,6 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+# 项目仍在移植测试阶段，不建议使用，如有需求可以移步我们的非openclaw版本的仓库，后续预计会在里面接入qq claw接口
 `daliy_paper_openclaw` 是一个把 ArXiv 抓取、LLM 筛选、中文翻译、队列管理、Web 界面和 OpenClaw 投递放在一起的单进程项目。它适合把“每天看论文”这件事自动化：抓论文、按研究方向打分、整理成摘要、在网页里管理，再定时发到你的 OpenClaw session。
 
 > **告别信息过载。** 让 AI 帮你每天读 ArXiv，只把真正值得你看的论文推到面前。
